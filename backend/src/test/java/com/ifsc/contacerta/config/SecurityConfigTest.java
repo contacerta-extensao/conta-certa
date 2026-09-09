@@ -88,16 +88,15 @@ class SecurityConfigTest extends PostgresIntegrationTest {
 
 		mockMvc.perform(get("/teacher/dashboard").header("Authorization", "Bearer " + token))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.rooms.total").value(0))
-				.andExpect(jsonPath("$.rooms.active").value(0))
-				.andExpect(jsonPath("$.rooms.archived").value(0))
-				.andExpect(jsonPath("$.students.total").value(0))
-				.andExpect(jsonPath("$.students.activeMemberships").value(0))
-				.andExpect(jsonPath("$.lessons.total").value(0))
-				.andExpect(jsonPath("$.lessons.published").value(0))
-				.andExpect(jsonPath("$.lessons.draft").value(0))
-				.andExpect(jsonPath("$.assignments.total").value(0))
-				.andExpect(jsonPath("$.assignments.published").value(0));
+				.andExpect(jsonPath("$.roomCount").value(0))
+				.andExpect(jsonPath("$.activeRoomCount").value(0))
+				.andExpect(jsonPath("$.archivedRoomCount").value(0))
+				.andExpect(jsonPath("$.studentCount").value(0))
+				.andExpect(jsonPath("$.lessonCount").value(0))
+				.andExpect(jsonPath("$.publishedLessonCount").value(0))
+				.andExpect(jsonPath("$.draftLessonCount").value(0))
+				.andExpect(jsonPath("$.recentAttemptCount").value(0))
+				.andExpect(jsonPath("$.recentRooms").isArray());
 	}
 
 	@Test

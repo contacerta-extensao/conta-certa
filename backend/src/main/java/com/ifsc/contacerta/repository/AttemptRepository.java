@@ -26,6 +26,15 @@ public interface AttemptRepository extends JpaRepository<Attempt, UUID> {
 
 	long countByAssignmentIdAndStudentId(UUID assignmentId, UUID studentId);
 
+	@Query("select count(attempt) from Attempt attempt "
+			+ "where attempt.assignment.room.teacher.id = :teacherId "
+			+ "and attempt.status in :statuses and attempt.submittedAt >= :since")
+	long countFinalizedByTeacherIdSince(
+			@Param("teacherId") UUID teacherId,
+			@Param("statuses") List<AttemptStatus> statuses,
+			@Param("since") Instant since
+	);
+
 	long countByAssignmentIdAndStudentIdAndStatusIn(
 			UUID assignmentId,
 			UUID studentId,

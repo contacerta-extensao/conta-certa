@@ -1,13 +1,23 @@
 package com.ifsc.contacerta.dto.teacher;
 
+import java.util.List;
+
+/**
+ * Cartões-resumo do professor.
+ *
+ * {@code recentAttemptCount} conta as tentativas finalizadas nos últimos sete
+ * dias em salas do professor; {@code recentRooms} traz as salas mais recentes
+ * já com o total de alunos ativos e a última atividade da turma.
+ */
 public record TeacherDashboardResponse(
-		RoomCounts rooms,
-		StudentCounts students,
-		LessonCounts lessons,
-		AssignmentCounts assignments
+		long roomCount,
+		long activeRoomCount,
+		long archivedRoomCount,
+		long studentCount,
+		long lessonCount,
+		long publishedLessonCount,
+		long draftLessonCount,
+		long recentAttemptCount,
+		List<TeacherDashboardRoomResponse> recentRooms
 ) {
-	public record RoomCounts(long total, long active, long archived) { }
-	public record StudentCounts(long total, long activeMemberships) { }
-	public record LessonCounts(long total, long published, long draft) { }
-	public record AssignmentCounts(long total, long published) { }
 }
