@@ -11,7 +11,7 @@ public record TeacherReportAttemptResponse(
 		UUID lessonId,
 		String lessonTitle,
 		UUID assignmentId,
-		int sequence,
+		int attemptNumber,
 		AttemptStatus status,
 		Instant startedAt,
 		Instant submittedAt,

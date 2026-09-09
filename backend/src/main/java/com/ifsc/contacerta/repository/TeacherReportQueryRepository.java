@@ -8,16 +8,16 @@ import com.ifsc.contacerta.model.ReportFilter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.time.Instant;
 import java.util.UUID;
-import java.util.List;
 
 public interface TeacherReportQueryRepository {
 
-	TeacherReportOverviewResponse overview(ReportFilter filter);
+	TeacherReportOverviewResponse overview(ReportFilter filter, Instant generatedAt);
 
 	Page<TeacherReportStudentResponse> students(ReportFilter filter, Pageable pageable);
 
 	Page<TeacherReportAttemptResponse> attempts(ReportFilter filter, UUID studentId, Pageable pageable);
 
-	List<TeacherReportRankingResponse> ranking(ReportFilter filter);
+	Page<TeacherReportRankingResponse> ranking(ReportFilter filter, Pageable pageable);
 }

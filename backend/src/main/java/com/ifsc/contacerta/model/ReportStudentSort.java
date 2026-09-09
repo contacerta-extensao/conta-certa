@@ -3,13 +3,15 @@ package com.ifsc.contacerta.model;
 import java.util.Arrays;
 
 public enum ReportStudentSort {
+
 	FULL_NAME("fullName", "u.full_name"),
-	TOTAL_XP("totalXp", "coalesce(rsp.total_xp, 0)"),
-	TOTAL_STARS("totalStars", "coalesce(rsp.total_best_stars, 0)"),
-	PASSED_ASSIGNMENTS("passedAssignments", "coalesce(rsp.passed_assignment_count, 0)"),
+	XP("xp", "coalesce(rsp.total_xp, 0)"),
+	STARS("stars", "coalesce(rsp.total_best_stars, 0)"),
+	COMPLETED_LESSONS("completedLessons", "coalesce(rsp.passed_assignment_count, 0)"),
 	LAST_ACTIVITY_AT("lastActivityAt", "rsp.last_activity_at"),
 	ATTEMPT_COUNT("attemptCount", "coalesce(metrics.attempt_count, 0)"),
-	AVERAGE_SCORE_PERCENT("averageScorePercent", "coalesce(metrics.average_score, 0)");
+	AVERAGE_SCORE_PERCENT("averageScorePercent", "coalesce(metrics.average_score, 0)"),
+	BEST_SCORE_PERCENT("bestScorePercent", "coalesce(metrics.best_score, 0)");
 
 	private final String property;
 	private final String expression;

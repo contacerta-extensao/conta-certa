@@ -11,5 +11,6 @@ public record TeacherReportRankingResponse(
 		String email,
 		long xp,
 		long stars,
+		long completedLessons,
 		Instant firstCompletionAt
 ) { }
