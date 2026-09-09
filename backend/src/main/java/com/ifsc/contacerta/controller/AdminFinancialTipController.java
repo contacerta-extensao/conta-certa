@@ -31,7 +31,7 @@ public class AdminFinancialTipController {
 	private static final Set<String> SORT_FIELDS = Set.of("title", "publicationDate", "createdAt", "updatedAt");
 
 	private final AdminFinancialTipService service;
-	private final AdminPageableFactory pageableFactory = new AdminPageableFactory();
+	private final PageableFactory pageableFactory = new PageableFactory();
 
 	@GetMapping
 	public PageResponse<AdminFinancialTipResponse> list(

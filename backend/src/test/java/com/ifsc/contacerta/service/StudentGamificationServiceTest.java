@@ -1,6 +1,6 @@
 package com.ifsc.contacerta.service;
 
-import com.ifsc.contacerta.dto.gamification.AchievementCollectionResponse;
+import com.ifsc.contacerta.dto.gamification.AchievementResponse;
 import com.ifsc.contacerta.dto.gamification.RankingResponse;
 import com.ifsc.contacerta.entity.AchievementUnlock;
 import com.ifsc.contacerta.entity.Institution;
@@ -70,11 +70,14 @@ class StudentGamificationServiceTest {
 
 		assertThat(response.content()).singleElement().satisfies(entry -> {
 			assertThat(entry.displayName()).isEqualTo("Ana S.");
-			assertThat(entry.currentStudent()).isFalse();
+			assertThat(entry.me()).isFalse();
+			assertThat(entry.xp()).isEqualTo(500);
+			assertThat(entry.stars()).isEqualTo(9);
+			assertThat(entry.lessonsPassed()).isEqualTo(6);
 		});
-		assertThat(response.self().position()).isEqualTo(37);
-		assertThat(response.self().displayName()).isEqualTo("Luiz M.");
-		assertThat(response.self().currentStudent()).isTrue();
+		assertThat(response.me().position()).isEqualTo(37);
+		assertThat(response.me().displayName()).isEqualTo("Luiz M.");
+		assertThat(response.me().me()).isTrue();
 		assertThat(response.totalElements()).isEqualTo(48);
 		assertThat(response.totalPages()).isEqualTo(3);
 	}
@@ -95,33 +98,35 @@ class StudentGamificationServiceTest {
 						fixture.room(), fixture.student(), AchievementCode.PERFECT_SCORE, unlockedAt
 				)));
 
-		AchievementCollectionResponse response = service.achievements(
+		List<AchievementResponse> response = service.achievements(
 				fixture.student().getId(), fixture.room().getId()
 		);
 
-		assertThat(response.content()).extracting(item -> item.code().name())
+		assertThat(response).extracting(item -> item.code().name())
 				.containsExactly("FIRST_PASS", "PERFECT_SCORE", "XP_100", "XP_500", "XP_1000", "PASSED_5", "PASSED_10");
-		assertThat(response.content()).filteredOn(item -> item.code() == AchievementCode.PERFECT_SCORE)
+		assertThat(response).allSatisfy(item -> assertThat(item.icon()).isNotBlank());
+		assertThat(response).filteredOn(item -> item.code() == AchievementCode.PERFECT_SCORE)
 				.singleElement().satisfies(item -> {
-					assertThat(item.current()).isEqualTo(1);
+					assertThat(item.progressCurrent()).isEqualTo(1);
+					assertThat(item.progressTarget()).isEqualTo(1);
 					assertThat(item.unlockedAt()).isEqualTo(unlockedAt);
 				});
-		assertThat(response.content()).filteredOn(item -> item.code() == AchievementCode.XP_500)
-				.singleElement().satisfies(item -> assertThat(item.current()).isEqualTo(500));
-		assertThat(response.content()).filteredOn(item -> item.code() == AchievementCode.PASSED_5)
-				.singleElement().satisfies(item -> assertThat(item.current()).isEqualTo(5));
+		assertThat(response).filteredOn(item -> item.code() == AchievementCode.XP_500)
+				.singleElement().satisfies(item -> assertThat(item.progressCurrent()).isEqualTo(500));
+		assertThat(response).filteredOn(item -> item.code() == AchievementCode.PASSED_5)
+				.singleElement().satisfies(item -> assertThat(item.progressCurrent()).isEqualTo(5));
 	}
 
 	@Test
 	void deveRetornarProgressoZeroSemProjecao() {
 		Fixture fixture = fixture();
 
-		AchievementCollectionResponse response = service.achievements(
+		List<AchievementResponse> response = service.achievements(
 				fixture.student().getId(), fixture.room().getId()
 		);
 
-		assertThat(response.content()).allSatisfy(item -> {
-			assertThat(item.current()).isZero();
+		assertThat(response).allSatisfy(item -> {
+			assertThat(item.progressCurrent()).isZero();
 			assertThat(item.unlocked()).isFalse();
 			assertThat(item.unlockedAt()).isNull();
 		});
@@ -160,14 +165,14 @@ class StudentGamificationServiceTest {
 		return new Fixture(room, student);
 	}
 
-	private RankingRowProjection row(long position, UUID id, String name, int xp, int stars, int level) {
+	private RankingRowProjection row(long position, UUID id, String name, int xp, int stars, int lessonsPassed) {
 		RankingRowProjection row = mock(RankingRowProjection.class);
 		when(row.getPosition()).thenReturn(position);
 		when(row.getStudentId()).thenReturn(id);
 		when(row.getFullName()).thenReturn(name);
-		when(row.getTotalXp()).thenReturn(xp);
-		when(row.getTotalStars()).thenReturn(stars);
-		when(row.getLevel()).thenReturn(level);
+		when(row.getXp()).thenReturn(xp);
+		when(row.getStars()).thenReturn(stars);
+		when(row.getLessonsPassed()).thenReturn(lessonsPassed);
 		return row;
 	}
 

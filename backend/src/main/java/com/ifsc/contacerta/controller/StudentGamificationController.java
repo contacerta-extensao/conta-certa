@@ -1,6 +1,6 @@
 package com.ifsc.contacerta.controller;
 
-import com.ifsc.contacerta.dto.gamification.AchievementCollectionResponse;
+import com.ifsc.contacerta.dto.gamification.AchievementResponse;
 import com.ifsc.contacerta.dto.gamification.RankingResponse;
 import com.ifsc.contacerta.security.CurrentUser;
 import com.ifsc.contacerta.service.StudentGamificationService;
@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -36,7 +37,7 @@ public class StudentGamificationController {
 	}
 
 	@GetMapping("/achievements")
-	public AchievementCollectionResponse achievements(
+	public List<AchievementResponse> achievements(
 			@AuthenticationPrincipal CurrentUser currentUser,
 			@PathVariable UUID roomId
 	) {

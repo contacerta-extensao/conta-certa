@@ -1,6 +1,5 @@
 package com.ifsc.contacerta.controller;
 
-import com.ifsc.contacerta.dto.gamification.AchievementCollectionResponse;
 import com.ifsc.contacerta.dto.gamification.AchievementResponse;
 import com.ifsc.contacerta.dto.gamification.RankingEntryResponse;
 import com.ifsc.contacerta.dto.gamification.RankingResponse;
@@ -35,15 +34,15 @@ class StudentGamificationControllerTest {
 		UUID studentId = UUID.randomUUID();
 		UUID roomId = UUID.randomUUID();
 		RankingEntryResponse peer = new RankingEntryResponse(1, UUID.randomUUID(), "Ana S.", 500, 9, 6, false);
-		RankingEntryResponse self = new RankingEntryResponse(37, studentId, "Luiz M.", 120, 3, 2, true);
+		RankingEntryResponse me = new RankingEntryResponse(37, studentId, "Luiz M.", 120, 3, 2, true);
 		when(service.ranking(studentId, roomId, 0, 20))
-				.thenReturn(new RankingResponse(List.of(peer), self, 0, 20, 48, 3));
+				.thenReturn(new RankingResponse(List.of(peer), me, 0, 20, 48, 3));
 		var mockMvc = mockMvc(service, studentId);
 
 		mockMvc.perform(get("/student/rooms/{roomId}/ranking", roomId))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.content[0].displayName").value("Ana S."))
-				.andExpect(jsonPath("$.self.position").value(37))
+				.andExpect(jsonPath("$.me.position").value(37))
 				.andExpect(jsonPath("$.totalElements").value(48))
 				.andExpect(jsonPath("$.totalPages").value(3));
 		verify(service).ranking(studentId, roomId, 0, 20);
@@ -55,20 +54,22 @@ class StudentGamificationControllerTest {
 		UUID studentId = UUID.randomUUID();
 		UUID roomId = UUID.randomUUID();
 		Instant unlockedAt = Instant.parse("2026-08-29T12:00:00Z");
-		when(service.achievements(studentId, roomId)).thenReturn(new AchievementCollectionResponse(List.of(
+		when(service.achievements(studentId, roomId)).thenReturn(List.of(
 				new AchievementResponse(
 						AchievementCode.FIRST_PASS, "Primeira aprovação", "Aprove uma lição nesta sala.",
-						1, 1, true, unlockedAt
+						"pi pi-check-circle", true, unlockedAt, 1, 1
 				)
-		)));
+		));
 		var mockMvc = mockMvc(service, studentId);
 
 		mockMvc.perform(get("/student/rooms/{roomId}/achievements", roomId))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.content[0].code").value("FIRST_PASS"))
-				.andExpect(jsonPath("$.content[0].current").value(1))
-				.andExpect(jsonPath("$.content[0].unlocked").value(true))
-				.andExpect(jsonPath("$.content[0].unlockedAt").value("2026-08-29T12:00:00Z"));
+				.andExpect(jsonPath("$[0].code").value("FIRST_PASS"))
+				.andExpect(jsonPath("$[0].icon").value("pi pi-check-circle"))
+				.andExpect(jsonPath("$[0].progressCurrent").value(1))
+				.andExpect(jsonPath("$[0].progressTarget").value(1))
+				.andExpect(jsonPath("$[0].unlocked").value(true))
+				.andExpect(jsonPath("$[0].unlockedAt").value("2026-08-29T12:00:00Z"));
 	}
 
 	@Test

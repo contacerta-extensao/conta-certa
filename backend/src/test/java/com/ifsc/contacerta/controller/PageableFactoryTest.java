@@ -10,9 +10,9 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class AdminPageableFactoryTest {
+class PageableFactoryTest {
 
-	private final AdminPageableFactory factory = new AdminPageableFactory();
+	private final PageableFactory factory = new PageableFactory();
 
 	@Test
 	void criaPaginaComOrdenacaoDescendentePermitida() {

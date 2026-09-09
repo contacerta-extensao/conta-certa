@@ -3,8 +3,9 @@ package com.ifsc.contacerta.repository;
 import com.ifsc.contacerta.dto.attempt.AttemptAnswerValueResponse;
 import com.ifsc.contacerta.dto.attempt.AttemptOptionResponse;
 import com.ifsc.contacerta.dto.report.ReportAttemptSeriesItemResponse;
-import com.ifsc.contacerta.dto.report.ReportLessonPerformanceResponse;
-import com.ifsc.contacerta.dto.report.ReportScoreDistributionResponse;
+import com.ifsc.contacerta.dto.report.ReportLessonCompletionResponse;
+import com.ifsc.contacerta.dto.report.ReportMetricsResponse;
+import com.ifsc.contacerta.dto.report.ReportScoreBucketResponse;
 import com.ifsc.contacerta.dto.report.TeacherReportAttemptAnswerResponse;
 import com.ifsc.contacerta.dto.report.TeacherReportAttemptResponse;
 import com.ifsc.contacerta.dto.report.TeacherReportOverviewResponse;
@@ -41,44 +42,53 @@ import java.util.UUID;
 public class JdbcTeacherReportQueryRepository implements TeacherReportQueryRepository {
 
 	private static final BigDecimal ZERO = new BigDecimal("0.00");
+	private static final BigDecimal HUNDRED = new BigDecimal("100");
 
 	private final JdbcClient jdbcClient;
 
 	@Override
-	public TeacherReportOverviewResponse overview(ReportFilter filter) {
+	public TeacherReportOverviewResponse overview(ReportFilter filter, Instant generatedAt) {
 		RoomMetrics roomMetrics = roomMetrics(filter);
+		AttemptMetrics attemptMetrics = attemptMetrics(filter);
 		CompletionMetrics completionMetrics = completionMetrics(filter);
 		return new TeacherReportOverviewResponse(
-				roomMetrics.activeStudentCount(),
-				participatingStudentCount(filter),
-				roomMetrics.averageRoomXp(),
-				completionMetrics.completionRatePercent(),
-				completionMetrics.averageBestStars(),
+				new ReportMetricsResponse(
+						roomMetrics.studentCount(),
+						participatingStudentCount(filter),
+						attemptMetrics.attemptCount(),
+						attemptMetrics.submittedAttemptCount(),
+						attemptMetrics.averageScorePercent(),
+						attemptMetrics.passRatePercent(),
+						completionMetrics.completionPercent(),
+						roomMetrics.averageRoomXp(),
+						completionMetrics.averageBestStars()
+				),
 				attemptSeries(filter),
 				scoreDistribution(filter),
-				lessonPerformance(filter)
+				lessonCompletion(filter, roomMetrics.studentCount()),
+				generatedAt
 		);
 	}
 
 	@Override
 	public Page<TeacherReportStudentResponse> students(ReportFilter filter, Pageable pageable) {
 		Sort.Order order = pageable.getSort().stream().findFirst()
-				.orElseGet(() -> Sort.Order.desc("totalXp"));
+				.orElseGet(() -> Sort.Order.desc("xp"));
 		ReportStudentSort sort = ReportStudentSort.fromProperty(order.getProperty());
 		String direction = order.isAscending() ? "asc" : "desc";
 		String nulls = order.getProperty().equals("lastActivityAt") ? " nulls last" : "";
 		String metricsConditions = attemptConditions(filter);
 		String sql = """
 				select u.id as student_id, u.full_name, u.registration_number, u.email,
-				       coalesce(rsp.total_xp, 0) as total_xp,
+				       coalesce(rsp.total_xp, 0) as xp,
+				       coalesce(rsp.total_best_stars, 0) as stars,
 				       coalesce(rsp.level, 1) as level,
-				       coalesce(rsp.total_best_stars, 0) as total_stars,
-				       coalesce(rsp.completed_assignment_count, 0) as completed_assignments,
-				       coalesce(rsp.passed_assignment_count, 0) as passed_assignments,
+				       coalesce(rsp.passed_assignment_count, 0) as completed_lessons,
+				       coalesce(rsp.completed_assignment_count, 0) as attempted_lessons,
 				       rsp.last_activity_at,
 				       coalesce(metrics.attempt_count, 0) as attempt_count,
-				       coalesce(metrics.average_score, 0) as average_score,
-				       coalesce(metrics.best_score, 0) as best_score
+				       metrics.average_score,
+				       metrics.best_score
 				from room_memberships rm
 				join users u on u.id = rm.student_id
 				left join room_student_progress rsp
@@ -96,6 +106,7 @@ public class JdbcTeacherReportQueryRepository implements TeacherReportQueryRepos
 				order by %s %s%s, u.id asc
 				limit :limit offset :offset
 				""".formatted(sort.expression(), direction, nulls);
+		long totalLessons = publishedAssignmentCount(filter);
 		JdbcClient.StatementSpec statement = bindAttemptFilter(
 				jdbcClient.sql(sql).param("roomId", filter.roomId()), filter
 		).param("limit", pageable.getPageSize()).param("offset", pageable.getOffset());
@@ -105,15 +116,16 @@ public class JdbcTeacherReportQueryRepository implements TeacherReportQueryRepos
 						rs.getString("full_name"),
 						rs.getString("registration_number"),
 						rs.getString("email"),
-						rs.getInt("total_xp"),
+						rs.getInt("xp"),
+						rs.getInt("stars"),
 						rs.getInt("level"),
-						rs.getInt("total_stars"),
-						rs.getInt("completed_assignments"),
-						rs.getInt("passed_assignments"),
-						toInstant(rs.getObject("last_activity_at", OffsetDateTime.class)),
+						rs.getInt("completed_lessons"),
+						rs.getInt("attempted_lessons"),
+						totalLessons,
 						rs.getLong("attempt_count"),
-						decimal(rs.getBigDecimal("average_score")),
-						decimal(rs.getBigDecimal("best_score"))
+						nullableDecimal(rs.getBigDecimal("average_score")),
+						nullableDecimal(rs.getBigDecimal("best_score")),
+						toInstant(rs.getObject("last_activity_at", OffsetDateTime.class))
 				)).list();
 		long total = jdbcClient.sql("""
 				select count(*) from room_memberships
@@ -179,10 +191,36 @@ public class JdbcTeacherReportQueryRepository implements TeacherReportQueryRepos
 	}
 
 	@Override
-	public List<TeacherReportRankingResponse> ranking(ReportFilter filter) {
-		JdbcClient.StatementSpec statement = jdbcClient.sql("""
+	public Page<TeacherReportRankingResponse> ranking(ReportFilter filter, Pageable pageable) {
+		JdbcClient.StatementSpec statement = jdbcClient.sql(rankingSql(filter) + """
+				select * from ranked order by position
+				limit :limit offset :offset
+				""");
+		List<TeacherReportRankingResponse> content = bindAttemptFilter(
+				statement.param("roomId", filter.roomId()), filter
+		).param("limit", pageable.getPageSize()).param("offset", pageable.getOffset())
+				.query((rs, rowNum) -> new TeacherReportRankingResponse(
+						Math.toIntExact(rs.getLong("position")),
+						rs.getObject("student_id", UUID.class),
+						rs.getString("full_name"),
+						rs.getString("registration_number"),
+						rs.getString("email"),
+						rs.getLong("xp"),
+						rs.getLong("stars"),
+						rs.getLong("completed_lessons"),
+						toInstant(rs.getObject("first_completion_at", OffsetDateTime.class))
+				)).list();
+		long total = jdbcClient.sql("""
+				select count(*) from room_memberships
+				where room_id = :roomId and status = 'ACTIVE'
+				""").param("roomId", filter.roomId()).query(Long.class).single();
+		return new PageImpl<>(content, pageable, total);
+	}
+
+	private String rankingSql(ReportFilter filter) {
+		return """
 				with filtered_attempts as (
-				    select a.student_id, a.assignment_id, a.xp_credited, a.stars, a.submitted_at
+				    select a.student_id, a.assignment_id, a.xp_credited, a.stars, a.passed, a.submitted_at
 				    from attempts a
 				    join lesson_assignments la on la.id = a.assignment_id
 				    where la.room_id = :roomId
@@ -197,31 +235,24 @@ public class JdbcTeacherReportQueryRepository implements TeacherReportQueryRepos
 				), star_totals as (
 				    select student_id, coalesce(sum(stars), 0) as stars
 				    from best_stars group by student_id
+				), passed_lessons as (
+				    select student_id, count(distinct assignment_id) as completed_lessons
+				    from filtered_attempts where passed group by student_id
 				), ranked as (
 				    select u.id as student_id, u.full_name, u.registration_number, u.email,
 				           coalesce(xp.xp, 0) as xp, coalesce(st.stars, 0) as stars,
+				           coalesce(pl.completed_lessons, 0) as completed_lessons,
 				           xp.first_completion_at,
 				           row_number() over (order by coalesce(xp.xp, 0) desc,
 				             coalesce(st.stars, 0) desc, xp.first_completion_at asc nulls last, u.id asc) as position
 				    from room_memberships rm
 				    join users u on u.id = rm.student_id
-				    left join xp_totals xp on xp.student_id = u.id
-				    left join star_totals st on st.student_id = u.id
+				    left join xp_totals xp on xp.student_id = rm.student_id
+				    left join star_totals st on st.student_id = rm.student_id
+				    left join passed_lessons pl on pl.student_id = rm.student_id
 				    where rm.room_id = :roomId and rm.status = 'ACTIVE'
 				)
-				select * from ranked order by position
-				""");
-		return bindAttemptFilter(statement.param("roomId", filter.roomId()), filter)
-				.query((rs, rowNum) -> new TeacherReportRankingResponse(
-						Math.toIntExact(rs.getLong("position")),
-						rs.getObject("student_id", UUID.class),
-						rs.getString("full_name"),
-						rs.getString("registration_number"),
-						rs.getString("email"),
-						rs.getLong("xp"),
-						rs.getLong("stars"),
-						toInstant(rs.getObject("first_completion_at", OffsetDateTime.class))
-				)).list();
+				""";
 	}
 
 	private Map<UUID, List<TeacherReportAttemptAnswerResponse>> loadAnswers(List<UUID> attemptIds) {
@@ -286,7 +317,7 @@ public class JdbcTeacherReportQueryRepository implements TeacherReportQueryRepos
 	) {
 		return new TeacherReportAttemptResponse(
 				source.attemptId(), source.lessonId(), source.lessonTitle(), source.assignmentId(),
-				source.sequence(), source.status(), source.startedAt(), source.submittedAt(),
+				source.attemptNumber(), source.status(), source.startedAt(), source.submittedAt(),
 				source.durationSeconds(), source.totalQuestions(), source.answeredQuestions(),
 				source.correctAnswers(), source.scorePercent(), source.passed(), source.starsEarned(),
 				source.xpCredited(), List.copyOf(answers)
@@ -344,15 +375,44 @@ public class JdbcTeacherReportQueryRepository implements TeacherReportQueryRepos
 				)).single();
 	}
 
+	/**
+	 * Tentativas iniciadas e finalizadas no recorte.
+	 *
+	 * "Iniciadas" conta por {@code started_at} e inclui tentativa em andamento;
+	 * "finalizadas" conta por {@code submitted_at}. Média e taxa de aprovação
+	 * são nulas quando não há tentativa finalizada no recorte.
+	 */
+	private AttemptMetrics attemptMetrics(ReportFilter filter) {
+		String started = startedWindow(filter, "a");
+		String finished = "a.status in ('SUBMITTED', 'EXPIRED') and " + submittedWindow(filter, "a");
+		String sql = """
+				select count(*) filter (where %s) as attempt_count,
+				       count(*) filter (where %s) as submitted_count,
+				       avg(a.score_percent) filter (where %s) as average_score,
+				       count(*) filter (where %s and a.passed) * 100.0
+				         / nullif(count(*) filter (where %s), 0) as pass_rate
+				from attempts a
+				join lesson_assignments la on la.id = a.assignment_id
+				where la.room_id = :roomId
+				""".formatted(started, finished, finished, finished, finished)
+				+ lessonCondition(filter);
+		return bindAttemptFilter(jdbcClient.sql(sql).param("roomId", filter.roomId()), filter)
+				.query((rs, rowNum) -> new AttemptMetrics(
+						rs.getLong("attempt_count"),
+						rs.getLong("submitted_count"),
+						nullableDecimal(rs.getBigDecimal("average_score")),
+						nullableDecimal(rs.getBigDecimal("pass_rate"))
+				)).single();
+	}
+
 	private CompletionMetrics completionMetrics(ReportFilter filter) {
-		String lessonCondition = filter.lessonId() == null ? "" : " and la.lesson_id = :lessonId";
 		JdbcClient.StatementSpec statement = jdbcClient.sql("""
 				with pairs as (
 				    select rm.student_id, la.id as assignment_id
 				    from room_memberships rm
 				    join lesson_assignments la on la.room_id = rm.room_id and la.status = 'PUBLISHED'
 				    where rm.room_id = :roomId and rm.status = 'ACTIVE'
-				""" + lessonCondition + """
+				""" + lessonCondition(filter) + """
 				), results as (
 				    select p.student_id, p.assignment_id,
 				           bool_or(a.passed is true) as passed,
@@ -363,14 +423,14 @@ public class JdbcTeacherReportQueryRepository implements TeacherReportQueryRepos
 				      and a.student_id = p.student_id and a.status in ('SUBMITTED', 'EXPIRED')
 				    group by p.student_id, p.assignment_id
 				)
-				select case when count(*) = 0 then 0
+				select case when count(*) = 0 then null
 				            else count(*) filter (where passed) * 100.0 / count(*) end as completion_rate,
 				       coalesce(avg(best_stars) filter (where completed), 0) as average_best_stars
 				from results
 				""").param("roomId", filter.roomId());
 		statement = bindLesson(statement, filter);
 		return statement.query((rs, rowNum) -> new CompletionMetrics(
-				decimal(rs.getBigDecimal("completion_rate")),
+				nullableDecimal(rs.getBigDecimal("completion_rate")),
 				decimal(rs.getBigDecimal("average_best_stars"))
 		)).single();
 	}
@@ -386,22 +446,42 @@ public class JdbcTeacherReportQueryRepository implements TeacherReportQueryRepos
 				.query(Long.class).single();
 	}
 
-	private List<ReportAttemptSeriesItemResponse> attemptSeries(ReportFilter filter) {
+	private long publishedAssignmentCount(ReportFilter filter) {
 		JdbcClient.StatementSpec statement = jdbcClient.sql("""
-				select (a.submitted_at at time zone 'UTC')::date as attempt_date, count(*) as attempt_count
-				from attempts a
-				join lesson_assignments la on la.id = a.assignment_id
-				where la.room_id = :roomId
-				""" + attemptConditions(filter) + """
-				group by attempt_date order by attempt_date
-				""");
-		return bindAttemptFilter(statement.param("roomId", filter.roomId()), filter)
+				select count(*) from lesson_assignments la
+				where la.room_id = :roomId and la.status = 'PUBLISHED'
+				""" + lessonCondition(filter));
+		return bindLesson(statement.param("roomId", filter.roomId()), filter)
+				.query(Long.class).single();
+	}
+
+	private List<ReportAttemptSeriesItemResponse> attemptSeries(ReportFilter filter) {
+		String sql = """
+				with base as (
+				    select a.started_at, a.submitted_at, a.status
+				    from attempts a
+				    join lesson_assignments la on la.id = a.assignment_id
+				    where la.room_id = :roomId
+				""" + lessonCondition(filter) + """
+				), events as (
+				    select (b.started_at at time zone 'UTC')::date as day, 1 as started, 0 as submitted
+				    from base b where %s
+				    union all
+				    select (b.submitted_at at time zone 'UTC')::date as day, 0 as started, 1 as submitted
+				    from base b where b.status in ('SUBMITTED', 'EXPIRED') and %s
+				)
+				select day, sum(started) as started_count, sum(submitted) as submitted_count
+				from events group by day order by day
+				""".formatted(startedWindow(filter, "b"), submittedWindow(filter, "b"));
+		return bindAttemptFilter(jdbcClient.sql(sql).param("roomId", filter.roomId()), filter)
 				.query((rs, rowNum) -> new ReportAttemptSeriesItemResponse(
-						rs.getObject("attempt_date", LocalDate.class), rs.getLong("attempt_count")
+						rs.getObject("day", LocalDate.class),
+						rs.getLong("started_count"),
+						rs.getLong("submitted_count")
 				)).list();
 	}
 
-	private ReportScoreDistributionResponse scoreDistribution(ReportFilter filter) {
+	private List<ReportScoreBucketResponse> scoreDistribution(ReportFilter filter) {
 		JdbcClient.StatementSpec statement = jdbcClient.sql("""
 				select count(*) filter (where a.score_percent between 0 and 49) as score_0_49,
 				       count(*) filter (where a.score_percent between 50 and 69) as score_50_69,
@@ -412,15 +492,18 @@ public class JdbcTeacherReportQueryRepository implements TeacherReportQueryRepos
 				where la.room_id = :roomId
 				""" + attemptConditions(filter));
 		return bindAttemptFilter(statement.param("roomId", filter.roomId()), filter)
-				.query((rs, rowNum) -> new ReportScoreDistributionResponse(
-						rs.getLong("score_0_49"), rs.getLong("score_50_69"),
-						rs.getLong("score_70_89"), rs.getLong("score_90_100")
+				.query((rs, rowNum) -> List.of(
+						new ReportScoreBucketResponse("0-49%", rs.getLong("score_0_49")),
+						new ReportScoreBucketResponse("50-69%", rs.getLong("score_50_69")),
+						new ReportScoreBucketResponse("70-89%", rs.getLong("score_70_89")),
+						new ReportScoreBucketResponse("90-100%", rs.getLong("score_90_100"))
 				)).single();
 	}
 
-	private List<ReportLessonPerformanceResponse> lessonPerformance(ReportFilter filter) {
+	private List<ReportLessonCompletionResponse> lessonCompletion(ReportFilter filter, long studentCount) {
 		JdbcClient.StatementSpec statement = jdbcClient.sql("""
 				select l.id as lesson_id, l.title as lesson_title,
+				       count(distinct a.student_id) filter (where a.passed) as completed_students,
 				       count(distinct a.student_id) as participating_students,
 				       count(*) as attempt_count,
 				       avg(a.score_percent) as average_score,
@@ -433,14 +516,20 @@ public class JdbcTeacherReportQueryRepository implements TeacherReportQueryRepos
 				group by l.id, l.title order by l.title, l.id
 				""");
 		return bindAttemptFilter(statement.param("roomId", filter.roomId()), filter)
-				.query((rs, rowNum) -> new ReportLessonPerformanceResponse(
-						rs.getObject("lesson_id", UUID.class),
-						rs.getString("lesson_title"),
-						rs.getLong("participating_students"),
-						rs.getLong("attempt_count"),
-						decimal(rs.getBigDecimal("average_score")),
-						decimal(rs.getBigDecimal("pass_rate"))
-				)).list();
+				.query((rs, rowNum) -> {
+					long completedStudents = rs.getLong("completed_students");
+					return new ReportLessonCompletionResponse(
+							rs.getObject("lesson_id", UUID.class),
+							rs.getString("lesson_title"),
+							completedStudents,
+							studentCount,
+							percent(completedStudents, studentCount),
+							nullableDecimal(rs.getBigDecimal("average_score")),
+							rs.getLong("participating_students"),
+							rs.getLong("attempt_count"),
+							decimal(rs.getBigDecimal("pass_rate"))
+					);
+				}).list();
 	}
 
 	private String attemptConditions(ReportFilter filter) {
@@ -448,6 +537,22 @@ public class JdbcTeacherReportQueryRepository implements TeacherReportQueryRepos
 		if (filter.lessonId() != null) sql.append(" and la.lesson_id = :lessonId");
 		if (!filter.allTime()) sql.append(" and a.submitted_at >= :fromAt and a.submitted_at < :toAt");
 		return sql.append('\n').toString();
+	}
+
+	private String lessonCondition(ReportFilter filter) {
+		return filter.lessonId() == null ? "\n" : " and la.lesson_id = :lessonId\n";
+	}
+
+	private String startedWindow(ReportFilter filter, String alias) {
+		return filter.allTime()
+				? "true"
+				: "%s.started_at >= :fromAt and %s.started_at < :toAt".formatted(alias, alias);
+	}
+
+	private String submittedWindow(ReportFilter filter, String alias) {
+		return filter.allTime()
+				? "true"
+				: "%s.submitted_at >= :fromAt and %s.submitted_at < :toAt".formatted(alias, alias);
 	}
 
 	private JdbcClient.StatementSpec bindAttemptFilter(JdbcClient.StatementSpec statement, ReportFilter filter) {
@@ -467,10 +572,29 @@ public class JdbcTeacherReportQueryRepository implements TeacherReportQueryRepos
 		return value == null ? ZERO : value.setScale(2, RoundingMode.HALF_UP);
 	}
 
+	private BigDecimal nullableDecimal(BigDecimal value) {
+		return value == null ? null : value.setScale(2, RoundingMode.HALF_UP);
+	}
+
+	private BigDecimal percent(long part, long total) {
+		return total == 0
+				? ZERO
+				: BigDecimal.valueOf(part).multiply(HUNDRED)
+						.divide(BigDecimal.valueOf(total), 2, RoundingMode.HALF_UP);
+	}
+
 	private Instant toInstant(OffsetDateTime value) {
 		return value == null ? null : value.toInstant();
 	}
 
-	private record RoomMetrics(long activeStudentCount, BigDecimal averageRoomXp) { }
-	private record CompletionMetrics(BigDecimal completionRatePercent, BigDecimal averageBestStars) { }
+	private record RoomMetrics(long studentCount, BigDecimal averageRoomXp) { }
+
+	private record AttemptMetrics(
+			long attemptCount,
+			long submittedAttemptCount,
+			BigDecimal averageScorePercent,
+			BigDecimal passRatePercent
+	) { }
+
+	private record CompletionMetrics(BigDecimal completionPercent, BigDecimal averageBestStars) { }
 }

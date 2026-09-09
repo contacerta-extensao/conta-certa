@@ -1,6 +1,5 @@
 package com.ifsc.contacerta.controller;
 
-import com.ifsc.contacerta.dto.shared.PageResponse;
 import com.ifsc.contacerta.dto.studentlesson.AttemptHistoryResponse;
 import com.ifsc.contacerta.dto.studentlesson.LessonRulesResponse;
 import com.ifsc.contacerta.dto.studentlesson.StudentLessonDetailResponse;
@@ -14,7 +13,6 @@ import com.ifsc.contacerta.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.MethodParameter;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
@@ -137,17 +135,17 @@ class StudentLessonControllerTest {
 				10,
 				true
 		);
-		when(lessonService.history(studentId, roomId, lessonId, PageRequest.of(0, 20)))
-				.thenReturn(new PageResponse<>(List.of(item), 0, 20, 1, 1));
+		when(lessonService.history(studentId, roomId, lessonId)).thenReturn(List.of(item));
 
 		mockMvc.perform(get("/student/rooms/{roomId}/lessons/{lessonId}/attempts", roomId, lessonId))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.content[0].attemptId").value(attemptId.toString()))
-				.andExpect(jsonPath("$.content[0].stars").isNumber())
-				.andExpect(jsonPath("$.content[0].correctAnswers").isNumber())
-				.andExpect(jsonPath("$.content[0].totalQuestions").isNumber())
-				.andExpect(jsonPath("$.content[0].best").value(true))
-				.andExpect(jsonPath("$.content[0].id").doesNotExist());
+				.andExpect(jsonPath("$").isArray())
+				.andExpect(jsonPath("$[0].attemptId").value(attemptId.toString()))
+				.andExpect(jsonPath("$[0].stars").isNumber())
+				.andExpect(jsonPath("$[0].correctAnswers").isNumber())
+				.andExpect(jsonPath("$[0].totalQuestions").isNumber())
+				.andExpect(jsonPath("$[0].best").value(true))
+				.andExpect(jsonPath("$[0].id").doesNotExist());
 	}
 
 	@Test
@@ -157,25 +155,18 @@ class StudentLessonControllerTest {
 	}
 
 	@Test
-	void deveRejeitarPaginaNegativaNoHistorico() throws Exception {
-		mockMvc.perform(get(
-					"/student/rooms/{roomId}/lessons/{lessonId}/attempts",
-					UUID.randomUUID(),
-					UUID.randomUUID()
-			).queryParam("page", "-1"))
-				.andExpect(status().isUnprocessableContent())
-				.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
-	}
+	void deveIgnorarParametrosDePaginacaoNoHistorico() throws Exception {
+		UUID roomId = UUID.randomUUID();
+		UUID lessonId = UUID.randomUUID();
+		when(lessonService.history(studentId, roomId, lessonId)).thenReturn(List.of());
 
-	@Test
-	void deveRejeitarTamanhoDePaginaForaDoLimiteNoHistorico() throws Exception {
 		mockMvc.perform(get(
 					"/student/rooms/{roomId}/lessons/{lessonId}/attempts",
-					UUID.randomUUID(),
-					UUID.randomUUID()
-			).queryParam("size", "101"))
-				.andExpect(status().isUnprocessableContent())
-				.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+					roomId,
+					lessonId
+			).queryParam("page", "-1").queryParam("size", "101"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$").isArray());
 	}
 
 	private HandlerMethodArgumentResolver currentUserResolver(CurrentUser currentUser) {

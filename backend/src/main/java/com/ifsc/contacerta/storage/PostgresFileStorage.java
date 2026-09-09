@@ -3,7 +3,7 @@ package com.ifsc.contacerta.storage;
 import com.ifsc.contacerta.entity.StoredFile;
 import com.ifsc.contacerta.entity.User;
 import com.ifsc.contacerta.repository.StoredFileRepository;
-import com.ifsc.contacerta.service.MaterialFileValidator;
+import com.ifsc.contacerta.model.ValidatedUpload;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -21,7 +21,7 @@ public class PostgresFileStorage implements FileStorage {
 	private final StoredFileRepository repository;
 
 	@Override
-	public StoredFile store(User owner, MaterialFileValidator.ValidatedMaterialFile file, Instant createdAt) {
+	public StoredFile store(User owner, ValidatedUpload file, Instant createdAt) {
 		byte[] content = file.content();
 		return repository.save(new StoredFile(
 				owner,

@@ -1,6 +1,8 @@
 package com.ifsc.contacerta.controller;
 
 import com.ifsc.contacerta.dto.teacher.TeacherDashboardResponse;
+import com.ifsc.contacerta.dto.teacher.TeacherDashboardRoomResponse;
+import com.ifsc.contacerta.model.Grade;
 import com.ifsc.contacerta.model.Role;
 import com.ifsc.contacerta.security.CurrentUser;
 import com.ifsc.contacerta.service.TeacherDashboardService;
@@ -15,6 +17,7 @@ import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -49,11 +52,13 @@ class TeacherDashboardControllerTest {
 
 	@Test
 	void deveExporEnvelopeCompletoUsandoIdDoProfessorAutenticado() throws Exception {
+		UUID roomId = UUID.randomUUID();
 		when(service.get(currentUser.userId())).thenReturn(new TeacherDashboardResponse(
-				new TeacherDashboardResponse.RoomCounts(4, 3, 1),
-				new TeacherDashboardResponse.StudentCounts(86, 80),
-				new TeacherDashboardResponse.LessonCounts(12, 9, 3),
-				new TeacherDashboardResponse.AssignmentCounts(24, 20)
+				4, 3, 1, 86, 12, 9, 3, 17,
+				List.of(new TeacherDashboardRoomResponse(
+						roomId, "2º ano A", Grade.HIGH_SCHOOL_2, 18, false,
+						Instant.parse("2026-09-07T10:00:00Z")
+				))
 		));
 
 		mockMvc.perform(get("/teacher/dashboard"))
@@ -61,11 +66,25 @@ class TeacherDashboardControllerTest {
 				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 				.andExpect(content().json("""
 						{
-						  "rooms": {"total": 4, "active": 3, "archived": 1},
-						  "students": {"total": 86, "activeMemberships": 80},
-						  "lessons": {"total": 12, "published": 9, "draft": 3},
-						  "assignments": {"total": 24, "published": 20}
+						  "roomCount": 4,
+						  "activeRoomCount": 3,
+						  "archivedRoomCount": 1,
+						  "studentCount": 86,
+						  "lessonCount": 12,
+						  "publishedLessonCount": 9,
+						  "draftLessonCount": 3,
+						  "recentAttemptCount": 17,
+						  "recentRooms": [
+						    {
+						      "id": "%s",
+						      "name": "2º ano A",
+						      "grade": "HIGH_SCHOOL_2",
+						      "studentCount": 18,
+						      "archived": false,
+						      "lastActivityAt": "2026-09-07T10:00:00Z"
+						    }
+						  ]
 						}
-						""", JsonCompareMode.STRICT));
+						""".formatted(roomId), JsonCompareMode.STRICT));
 	}
 }

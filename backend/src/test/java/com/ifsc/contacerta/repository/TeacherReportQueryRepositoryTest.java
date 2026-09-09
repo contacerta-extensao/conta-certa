@@ -3,8 +3,8 @@ package com.ifsc.contacerta.repository;
 import com.ifsc.contacerta.dto.attempt.AttemptAnswerValueResponse;
 import com.ifsc.contacerta.dto.attempt.AttemptOptionResponse;
 import com.ifsc.contacerta.dto.report.ReportAttemptSeriesItemResponse;
-import com.ifsc.contacerta.dto.report.ReportLessonPerformanceResponse;
-import com.ifsc.contacerta.dto.report.ReportScoreDistributionResponse;
+import com.ifsc.contacerta.dto.report.ReportLessonCompletionResponse;
+import com.ifsc.contacerta.dto.report.ReportScoreBucketResponse;
 import com.ifsc.contacerta.dto.report.TeacherReportOverviewResponse;
 import com.ifsc.contacerta.dto.report.TeacherReportStudentResponse;
 import com.ifsc.contacerta.dto.report.TeacherReportAttemptResponse;
@@ -44,25 +44,36 @@ class TeacherReportQueryRepositoryTest extends PostgresIntegrationTest {
 		insertAttempt(fixture.assignmentId(), fixture.studentOneId(), 4, "2026-08-11T11:00:00Z", 95, true, 3, 40);
 		insertAttempt(fixture.assignmentId(), fixture.studentOneId(), 5, "2026-07-01T10:00:00Z", 100, true, 3, 50);
 
+		Instant generatedAt = Instant.parse("2026-08-21T09:00:00Z");
 		TeacherReportOverviewResponse result = repository.overview(new ReportFilter(
 				fixture.roomId(), null,
 				Instant.parse("2026-08-01T00:00:00Z"),
 				Instant.parse("2026-08-20T00:00:00Z")
-		));
+		), generatedAt);
 
-		assertThat(result.activeStudentCount()).isEqualTo(2);
-		assertThat(result.participatingStudentCount()).isEqualTo(1);
-		assertThat(result.averageRoomXp()).isEqualByComparingTo("75.00");
-		assertThat(result.completionRatePercent()).isEqualByComparingTo("25.00");
-		assertThat(result.averageBestStars()).isEqualByComparingTo("3.00");
-		assertThat(result.attemptSeries()).containsExactly(
-				new ReportAttemptSeriesItemResponse(LocalDate.parse("2026-08-10"), 2),
-				new ReportAttemptSeriesItemResponse(LocalDate.parse("2026-08-11"), 2)
+		assertThat(result.generatedAt()).isEqualTo(generatedAt);
+		assertThat(result.metrics().studentCount()).isEqualTo(2);
+		assertThat(result.metrics().activeStudentCount()).isEqualTo(1);
+		assertThat(result.metrics().attemptCount()).isEqualTo(4);
+		assertThat(result.metrics().submittedAttemptCount()).isEqualTo(4);
+		assertThat(result.metrics().averageScorePercent()).isEqualByComparingTo("68.75");
+		assertThat(result.metrics().passRatePercent()).isEqualByComparingTo("75.00");
+		assertThat(result.metrics().completionPercent()).isEqualByComparingTo("25.00");
+		assertThat(result.metrics().averageRoomXp()).isEqualByComparingTo("75.00");
+		assertThat(result.metrics().averageBestStars()).isEqualByComparingTo("3.00");
+		assertThat(result.attemptsOverTime()).containsExactly(
+				new ReportAttemptSeriesItemResponse(LocalDate.parse("2026-08-10"), 2, 2),
+				new ReportAttemptSeriesItemResponse(LocalDate.parse("2026-08-11"), 2, 2)
 		);
-		assertThat(result.scoreDistribution()).isEqualTo(new ReportScoreDistributionResponse(1, 1, 1, 1));
-		assertThat(result.lessonPerformance()).containsExactly(new ReportLessonPerformanceResponse(
-				fixture.lessonId(), "Aula de porcentagem", 1, 4,
-				new BigDecimal("68.75"), new BigDecimal("75.00")
+		assertThat(result.scoreDistribution()).containsExactly(
+				new ReportScoreBucketResponse("0-49%", 1),
+				new ReportScoreBucketResponse("50-69%", 1),
+				new ReportScoreBucketResponse("70-89%", 1),
+				new ReportScoreBucketResponse("90-100%", 1)
+		);
+		assertThat(result.lessonCompletion()).containsExactly(new ReportLessonCompletionResponse(
+				fixture.lessonId(), "Aula de porcentagem", 1, 2,
+				new BigDecimal("50.00"), new BigDecimal("68.75"), 1, 4, new BigDecimal("75.00")
 		));
 	}
 
@@ -79,18 +90,18 @@ class TeacherReportQueryRepositoryTest extends PostgresIntegrationTest {
 						Instant.parse("2026-08-01T00:00:00Z"),
 						Instant.parse("2026-08-20T00:00:00Z")
 				),
-				PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "totalXp"))
+				PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "xp"))
 		);
 
 		assertThat(result.getTotalElements()).isEqualTo(2);
 		assertThat(result.getContent()).containsExactly(
 				new TeacherReportStudentResponse(
 						fixture.studentOneId(), "Aluno Um", "S1", "um@example.com",
-						100, 1, 0, 0, 0, null, 2, new BigDecimal("60.00"), new BigDecimal("80.00")
+						100, 0, 1, 0, 0, 2, 2, new BigDecimal("60.00"), new BigDecimal("80.00"), null
 				),
 				new TeacherReportStudentResponse(
 						fixture.studentTwoId(), "Aluno Dois", "S2", "dois@example.com",
-						50, 1, 0, 0, 0, null, 0, new BigDecimal("0.00"), new BigDecimal("0.00")
+						50, 0, 1, 0, 0, 2, 0, null, null, null
 				)
 		);
 	}
@@ -237,20 +248,21 @@ class TeacherReportQueryRepositoryTest extends PostgresIntegrationTest {
 		insertAttempt(fixture.assignmentId(), fixture.studentOneId(), 2, "2026-08-11T10:00:00Z", 80, true, 3, 20);
 		insertAttempt(fixture.assignmentId(), fixture.studentOneId(), 3, "2026-07-01T10:00:00Z", 100, true, 3, 100);
 
-		List<TeacherReportRankingResponse> result = repository.ranking(new ReportFilter(
+		Page<TeacherReportRankingResponse> result = repository.ranking(new ReportFilter(
 				fixture.roomId(), null,
 				Instant.parse("2026-08-01T00:00:00Z"),
 				Instant.parse("2026-08-20T00:00:00Z")
-		));
+		), PageRequest.of(0, 20));
 
-		assertThat(result).containsExactly(
+		assertThat(result.getTotalElements()).isEqualTo(2);
+		assertThat(result.getContent()).containsExactly(
 				new TeacherReportRankingResponse(
 						1, fixture.studentOneId(), "Aluno Um", "S1", "um@example.com",
-						30, 3, Instant.parse("2026-08-10T10:00:00Z")
+						30, 3, 1, Instant.parse("2026-08-10T10:00:00Z")
 				),
 				new TeacherReportRankingResponse(
 						2, fixture.studentTwoId(), "Aluno Dois", "S2", "dois@example.com",
-						0, 0, null
+						0, 0, 0, null
 				)
 		);
 	}

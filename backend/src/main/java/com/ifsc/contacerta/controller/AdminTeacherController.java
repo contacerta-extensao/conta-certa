@@ -29,7 +29,7 @@ import java.util.UUID;
 public class AdminTeacherController {
 	private static final Set<String> SORT_FIELDS = Set.of("fullName", "createdAt", "updatedAt", "status");
 	private final AdminTeacherService service;
-	private final AdminPageableFactory pageableFactory = new AdminPageableFactory();
+	private final PageableFactory pageableFactory = new PageableFactory();
 
 	@GetMapping
 	public PageResponse<AdminTeacherResponse> list(

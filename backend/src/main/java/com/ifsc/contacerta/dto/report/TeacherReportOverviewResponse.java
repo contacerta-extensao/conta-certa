@@ -1,15 +1,12 @@
 package com.ifsc.contacerta.dto.report;
 
-import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 
 public record TeacherReportOverviewResponse(
-		long activeStudentCount,
-		long participatingStudentCount,
-		BigDecimal averageRoomXp,
-		BigDecimal completionRatePercent,
-		BigDecimal averageBestStars,
-		List<ReportAttemptSeriesItemResponse> attemptSeries,
-		ReportScoreDistributionResponse scoreDistribution,
-		List<ReportLessonPerformanceResponse> lessonPerformance
+		ReportMetricsResponse metrics,
+		List<ReportAttemptSeriesItemResponse> attemptsOverTime,
+		List<ReportScoreBucketResponse> scoreDistribution,
+		List<ReportLessonCompletionResponse> lessonCompletion,
+		Instant generatedAt
 ) { }

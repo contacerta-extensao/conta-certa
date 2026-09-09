@@ -1,6 +1,5 @@
 package com.ifsc.contacerta.service;
 
-import com.ifsc.contacerta.dto.shared.PageResponse;
 import com.ifsc.contacerta.dto.studentlesson.AttemptHistoryResponse;
 import com.ifsc.contacerta.dto.studentlesson.LessonRulesResponse;
 import com.ifsc.contacerta.dto.studentlesson.StudentLessonDetailResponse;
@@ -22,7 +21,6 @@ import com.ifsc.contacerta.repository.QuestionRepository;
 import com.ifsc.contacerta.repository.RoomMembershipRepository;
 import com.ifsc.contacerta.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -88,12 +86,7 @@ public class StudentLessonService {
 	}
 
 	@Transactional(readOnly = true)
-	public PageResponse<AttemptHistoryResponse> history(
-			UUID studentId,
-			UUID roomId,
-			UUID lessonId,
-			Pageable pageable
-	) {
+	public List<AttemptHistoryResponse> history(UUID studentId, UUID roomId, UUID lessonId) {
 		requireStudent(studentId);
 		requireMembership(studentId, roomId);
 		LessonAssignment assignment = assignmentRepository.findAccessibleByRoomIdAndLessonIdAndStudentId(
@@ -107,7 +100,8 @@ public class StudentLessonService {
 				)
 				.map(Attempt::getId)
 				.orElse(null);
-		return PageResponse.from(attemptRepository.findByAssignmentIdAndStudentIdOrderBySequenceDesc(assignment.getId(), studentId, pageable)
+		return attemptRepository.findByAssignmentIdAndStudentIdOrderBySequenceDesc(assignment.getId(), studentId)
+				.stream()
 				.map(attempt -> new AttemptHistoryResponse(
 						attempt.getId(),
 						attempt.getStatus(),
@@ -119,7 +113,8 @@ public class StudentLessonService {
 						attempt.getCorrectAnswers(),
 						attempt.getTotalQuestions(),
 						attempt.getId().equals(bestAttemptId)
-				)));
+				))
+				.toList();
 	}
 
 	private StudentLessonPathResponse pathResponse(UUID studentId, LessonAssignment assignment, Instant now) {

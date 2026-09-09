@@ -6,6 +6,7 @@ import com.ifsc.contacerta.dto.lesson.LessonSummaryResponse;
 import com.ifsc.contacerta.dto.lesson.UpdateLessonRequest;
 import com.ifsc.contacerta.dto.shared.PageResponse;
 import com.ifsc.contacerta.exception.ApiException;
+import com.ifsc.contacerta.model.ContentStatus;
 import com.ifsc.contacerta.security.CurrentUser;
 import com.ifsc.contacerta.service.LessonService;
 import jakarta.validation.Valid;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -32,18 +34,26 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TeacherLessonController {
 
+	private static final Set<String> SORT_FIELDS = Set.of("title", "createdAt", "updatedAt");
+
 	private final LessonService lessonService;
+	private final PageableFactory pageableFactory = new PageableFactory();
 
 	@GetMapping
 	public PageResponse<LessonSummaryResponse> list(
 			@AuthenticationPrincipal CurrentUser currentUser,
+			@RequestParam(required = false) String search,
+			@RequestParam(required = false) ContentStatus status,
 			@RequestParam(defaultValue = "0") int page,
-			@RequestParam(defaultValue = "20") int size
+			@RequestParam(defaultValue = "20") int size,
+			@RequestParam(defaultValue = "createdAt,desc") String sort
 	) {
-		if (page < 0 || size < 1 || size > 100) {
-			throw new ApiException(HttpStatus.UNPROCESSABLE_CONTENT, "INVALID_PAGE", "Pagination values are invalid.");
-		}
-		return lessonService.list(currentUser.userId(), PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
+		return lessonService.list(
+				currentUser.userId(),
+				search,
+				status,
+				pageableFactory.create(page, size, sort, SORT_FIELDS, "INVALID_LESSON_SORT")
+		);
 	}
 
 	@PostMapping

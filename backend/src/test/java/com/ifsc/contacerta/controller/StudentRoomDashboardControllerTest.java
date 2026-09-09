@@ -1,7 +1,6 @@
 package com.ifsc.contacerta.controller;
 
-import com.ifsc.contacerta.dto.gamification.RankingEntryResponse;
-import com.ifsc.contacerta.dto.studentdashboard.StudentDashboardProgressResponse;
+import com.ifsc.contacerta.dto.studentdashboard.StudentNextLessonResponse;
 import com.ifsc.contacerta.dto.studentdashboard.StudentRoomDashboardResponse;
 import com.ifsc.contacerta.model.Role;
 import com.ifsc.contacerta.security.CurrentUser;
@@ -33,13 +32,13 @@ class StudentRoomDashboardControllerTest {
 		StudentRoomDashboardService dashboardService = mock(StudentRoomDashboardService.class);
 		UUID studentId = UUID.randomUUID();
 		UUID roomId = UUID.randomUUID();
+		UUID assignmentId = UUID.randomUUID();
+		UUID lessonId = UUID.randomUUID();
 		when(dashboardService.dashboard(studentId, roomId)).thenReturn(new StudentRoomDashboardResponse(
-				null,
-				new StudentDashboardProgressResponse(150, 2, 50, 5, 3, 2, 4),
-				null,
+				null, 50, 2, 150, 50, 50, 5, 12, 2, 4, 3L, 27,
+				new StudentNextLessonResponse(assignmentId, lessonId, "Juros compostos", 3, null),
 				List.of(),
-				null,
-				new RankingEntryResponse(3, studentId, "Aluno S.", 150, 5, 2, true)
+				null
 		));
 		var mockMvc = MockMvcBuilders.standaloneSetup(new StudentRoomController(membershipService, dashboardService))
 				.setCustomArgumentResolvers(resolver(new CurrentUser(studentId, Role.STUDENT, UUID.randomUUID())))
@@ -47,8 +46,18 @@ class StudentRoomDashboardControllerTest {
 
 		mockMvc.perform(get("/student/rooms/{roomId}/dashboard", roomId))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.progress.totalXp").value(150))
-				.andExpect(jsonPath("$.ranking.position").value(3))
+				.andExpect(jsonPath("$.xpTotal").value(150))
+				.andExpect(jsonPath("$.level").value(2))
+				.andExpect(jsonPath("$.levelProgressPercent").value(50))
+				.andExpect(jsonPath("$.xpToNextLevel").value(50))
+				.andExpect(jsonPath("$.starsTotal").value(5))
+				.andExpect(jsonPath("$.starsPossible").value(12))
+				.andExpect(jsonPath("$.lessonsCompleted").value(2))
+				.andExpect(jsonPath("$.lessonsTotal").value(4))
+				.andExpect(jsonPath("$.progressPercent").value(50))
+				.andExpect(jsonPath("$.rankingPosition").value(3))
+				.andExpect(jsonPath("$.rankingParticipants").value(27))
+				.andExpect(jsonPath("$.nextLesson.title").value("Juros compostos"))
 				.andExpect(jsonPath("$.recentAchievements").isArray());
 		verify(dashboardService).dashboard(studentId, roomId);
 	}

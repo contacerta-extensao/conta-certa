@@ -1,6 +1,8 @@
 package com.ifsc.contacerta.service;
 
 import com.ifsc.contacerta.dto.extraattempt.CreateExtraAttemptGrantRequest;
+import com.ifsc.contacerta.dto.extraattempt.ExtraAttemptGrantResponse;
+import com.ifsc.contacerta.entity.ExtraAttemptGrant;
 import com.ifsc.contacerta.entity.Institution;
 import com.ifsc.contacerta.entity.Lesson;
 import com.ifsc.contacerta.entity.LessonAssignment;
@@ -28,6 +30,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -82,6 +85,26 @@ class ExtraAttemptGrantServiceTest {
 				attemptRepository,
 				Clock.fixed(Instant.parse("2026-08-28T12:00:00Z"), ZoneOffset.UTC)
 		);
+	}
+
+	@Test
+	void deveDevolverConcessaoNoContratoConsumidoPeloFrontend() {
+		when(grantRepository.save(any(ExtraAttemptGrant.class))).thenAnswer(call -> call.getArgument(0));
+		when(grantRepository.sumQuantityByAssignmentIdAndStudentId(assignment.getId(), student.getId()))
+				.thenReturn(2L);
+		when(attemptRepository.countByAssignmentIdAndStudentId(assignment.getId(), student.getId()))
+				.thenReturn(4L);
+
+		ExtraAttemptGrantResponse response = service.grant(
+				teacher.getId(), assignment.getId(), student.getId(), new CreateExtraAttemptGrantRequest(1)
+		);
+
+		assertThat(response.assignmentId()).isEqualTo(assignment.getId());
+		assertThat(response.studentId()).isEqualTo(student.getId());
+		assertThat(response.extraAttemptsGranted()).isEqualTo(2);
+		assertThat(response.attemptsUsed()).isEqualTo(4);
+		assertThat(response.attemptsAvailable()).isEqualTo(1);
+		assertThat(response.id()).isNotNull();
 	}
 
 	@Test

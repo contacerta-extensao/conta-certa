@@ -1,6 +1,7 @@
 package com.ifsc.contacerta.service;
 
 import com.ifsc.contacerta.exception.ApiException;
+import com.ifsc.contacerta.model.ValidatedUpload;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockMultipartFile;
@@ -21,7 +22,7 @@ class MaterialFileValidatorTest {
 	void deveAceitarPdfPelaAssinaturaReal() {
 		byte[] content = "%PDF-1.7\nconteudo".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
 
-		MaterialFileValidator.ValidatedMaterialFile result = validator.validate(file(
+		ValidatedUpload result = validator.validate(file(
 				"aula.pdf", "application/pdf", content
 		));
 

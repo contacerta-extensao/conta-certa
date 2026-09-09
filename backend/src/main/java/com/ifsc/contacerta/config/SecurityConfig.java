@@ -31,6 +31,8 @@ public class SecurityConfig {
 								"/auth/verify-email", "/auth/resend-verification", "/auth/forgot-password",
 								"/auth/reset-password", "/auth/accept-teacher-invite").permitAll()
 						.requestMatchers(HttpMethod.GET, "/institutions/options").permitAll()
+						// O <img> do Markdown da licao nao envia token; ver LessonImageController.
+						.requestMatchers(HttpMethod.GET, "/lesson-images/*").permitAll()
 						.requestMatchers(
 								HttpMethod.GET,
 								"/student/rooms/*/ranking",

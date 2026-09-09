@@ -30,7 +30,7 @@ public class AdminInstitutionController {
 	private static final Set<String> SORT_FIELDS = Set.of("name", "createdAt", "updatedAt");
 
 	private final AdminInstitutionService service;
-	private final AdminPageableFactory pageableFactory = new AdminPageableFactory();
+	private final PageableFactory pageableFactory = new PageableFactory();
 
 	@GetMapping
 	public PageResponse<AdminInstitutionResponse> list(

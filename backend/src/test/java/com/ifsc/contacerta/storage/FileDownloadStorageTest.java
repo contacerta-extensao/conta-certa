@@ -12,7 +12,7 @@ import com.ifsc.contacerta.entity.User;
 import com.ifsc.contacerta.model.AccountStatus;
 import com.ifsc.contacerta.model.Grade;
 import com.ifsc.contacerta.model.Role;
-import com.ifsc.contacerta.service.MaterialFileValidator;
+import com.ifsc.contacerta.model.ValidatedUpload;
 import com.ifsc.contacerta.support.PostgresIntegrationTest;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -301,7 +301,7 @@ class FileDownloadStorageTest extends PostgresIntegrationTest {
 	private StoredFile file(User owner, String name) {
 		return storage.store(
 				owner,
-				new MaterialFileValidator.ValidatedMaterialFile(name, "application/pdf", new byte[]{1, 2, 3}),
+				new ValidatedUpload(name, "application/pdf", new byte[]{1, 2, 3}),
 				NOW
 		);
 	}

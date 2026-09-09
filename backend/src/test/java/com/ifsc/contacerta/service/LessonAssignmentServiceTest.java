@@ -233,10 +233,14 @@ class LessonAssignmentServiceTest {
 				.thenReturn(List.of(first, second));
 
 		assertThat(service.list(teacher.getId(), room.getId()))
-				.extracting(LessonAssignmentResponse::lessonTitle, LessonAssignmentResponse::position)
+				.extracting(
+						response -> response.lesson().title(),
+						LessonAssignmentResponse::position,
+						LessonAssignmentResponse::removable
+				)
 				.containsExactly(
-						tuple("Juros compostos", 1),
-						tuple("Segunda", 2)
+						tuple("Juros compostos", 1, true),
+						tuple("Segunda", 2, true)
 				);
 	}
 

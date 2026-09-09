@@ -4,18 +4,26 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
+/**
+ * Linha por aluno do relatório.
+ *
+ * {@code completedLessons} conta lições aprovadas e {@code attemptedLessons},
+ * lições com pelo menos uma tentativa finalizada. As notas são nulas quando o
+ * aluno não tem tentativa no recorte.
+ */
 public record TeacherReportStudentResponse(
 		UUID studentId,
 		String fullName,
 		String registrationNumber,
 		String email,
-		int totalXp,
+		int xp,
+		int stars,
 		int level,
-		int totalStars,
-		int completedAssignments,
-		int passedAssignments,
-		Instant lastActivityAt,
+		int completedLessons,
+		int attemptedLessons,
+		long totalLessons,
 		long attemptCount,
 		BigDecimal averageScorePercent,
-		BigDecimal bestScorePercent
+		BigDecimal bestScorePercent,
+		Instant lastActivityAt
 ) { }

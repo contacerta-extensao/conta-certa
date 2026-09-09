@@ -1,6 +1,8 @@
 package com.ifsc.contacerta.repository;
 
 import com.ifsc.contacerta.entity.MediaView;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -44,5 +46,53 @@ public interface MediaViewRepository extends JpaRepository<MediaView, UUID> {
 			@Param("roomId") UUID roomId,
 			@Param("materialId") UUID materialId,
 			@Param("viewedAt") Instant viewedAt
+	);
+
+	/**
+	 * Quem abriu o vídeo, uma linha por aluno.
+	 *
+	 * O mesmo vídeo pode estar em mais de uma sala do professor, por isso as
+	 * visualizações do aluno são agregadas: {@code firstViewedAt} é a primeira
+	 * abertura em qualquer sala dele e {@code lastViewedAt}, a mais recente.
+	 */
+	@Query(value = """
+			select student.id as studentId, student.fullName as fullName,
+				student.registrationNumber as registrationNumber,
+				min(view.firstViewedAt) as firstViewedAt, max(view.lastViewedAt) as lastViewedAt
+			from MediaView view
+			join view.student student
+			where view.video.id = :videoId and view.room.teacher.id = :teacherId
+			group by student.id, student.fullName, student.registrationNumber
+			order by max(view.lastViewedAt) desc, student.fullName asc
+			""", countQuery = """
+			select count(distinct view.student.id)
+			from MediaView view
+			where view.video.id = :videoId and view.room.teacher.id = :teacherId
+			""")
+	Page<MediaViewerProjection> findVideoViewers(
+			@Param("videoId") UUID videoId,
+			@Param("teacherId") UUID teacherId,
+			Pageable pageable
+	);
+
+	/** Quem abriu o material, uma linha por aluno. Ver {@link #findVideoViewers}. */
+	@Query(value = """
+			select student.id as studentId, student.fullName as fullName,
+				student.registrationNumber as registrationNumber,
+				min(view.firstViewedAt) as firstViewedAt, max(view.lastViewedAt) as lastViewedAt
+			from MediaView view
+			join view.student student
+			where view.material.id = :materialId and view.room.teacher.id = :teacherId
+			group by student.id, student.fullName, student.registrationNumber
+			order by max(view.lastViewedAt) desc, student.fullName asc
+			""", countQuery = """
+			select count(distinct view.student.id)
+			from MediaView view
+			where view.material.id = :materialId and view.room.teacher.id = :teacherId
+			""")
+	Page<MediaViewerProjection> findMaterialViewers(
+			@Param("materialId") UUID materialId,
+			@Param("teacherId") UUID teacherId,
+			Pageable pageable
 	);
 }
