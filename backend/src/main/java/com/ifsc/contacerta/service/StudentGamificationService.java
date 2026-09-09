@@ -1,6 +1,5 @@
 package com.ifsc.contacerta.service;
 
-import com.ifsc.contacerta.dto.gamification.AchievementCollectionResponse;
 import com.ifsc.contacerta.dto.gamification.AchievementResponse;
 import com.ifsc.contacerta.dto.gamification.RankingEntryResponse;
 import com.ifsc.contacerta.dto.gamification.RankingResponse;
@@ -46,13 +45,13 @@ import static com.ifsc.contacerta.model.AchievementCode.XP_500;
 public class StudentGamificationService {
 
 	private static final List<AchievementDefinition> DEFINITIONS = List.of(
-			new AchievementDefinition(FIRST_PASS, "Primeira aprovação", "Aprove uma lição nesta sala.", 1, ProgressKind.PASSES),
-			new AchievementDefinition(PERFECT_SCORE, "Nota perfeita", "Obtenha 100% em uma tentativa.", 1, ProgressKind.UNLOCK),
-			new AchievementDefinition(XP_100, "100 XP", "Conquiste 100 XP nesta sala.", 100, ProgressKind.XP),
-			new AchievementDefinition(XP_500, "500 XP", "Conquiste 500 XP nesta sala.", 500, ProgressKind.XP),
-			new AchievementDefinition(XP_1000, "1.000 XP", "Conquiste 1.000 XP nesta sala.", 1_000, ProgressKind.XP),
-			new AchievementDefinition(PASSED_5, "Cinco aprovações", "Aprove cinco lições nesta sala.", 5, ProgressKind.PASSES),
-			new AchievementDefinition(PASSED_10, "Dez aprovações", "Aprove dez lições nesta sala.", 10, ProgressKind.PASSES)
+			new AchievementDefinition(FIRST_PASS, "Primeira aprovação", "Aprove uma lição nesta sala.", "pi pi-check-circle", 1, ProgressKind.PASSES),
+			new AchievementDefinition(PERFECT_SCORE, "Nota perfeita", "Obtenha 100% em uma tentativa.", "pi pi-star-fill", 1, ProgressKind.UNLOCK),
+			new AchievementDefinition(XP_100, "100 XP", "Conquiste 100 XP nesta sala.", "pi pi-bolt", 100, ProgressKind.XP),
+			new AchievementDefinition(XP_500, "500 XP", "Conquiste 500 XP nesta sala.", "pi pi-bolt", 500, ProgressKind.XP),
+			new AchievementDefinition(XP_1000, "1.000 XP", "Conquiste 1.000 XP nesta sala.", "pi pi-crown", 1_000, ProgressKind.XP),
+			new AchievementDefinition(PASSED_5, "Cinco aprovações", "Aprove cinco lições nesta sala.", "pi pi-trophy", 5, ProgressKind.PASSES),
+			new AchievementDefinition(PASSED_10, "Dez aprovações", "Aprove dez lições nesta sala.", "pi pi-trophy", 10, ProgressKind.PASSES)
 	);
 
 	private final UserRepository userRepository;
@@ -68,26 +67,25 @@ public class StudentGamificationService {
 		List<RankingEntryResponse> content = ranking.getContent().stream()
 				.map(row -> toEntry(row, studentId))
 				.toList();
-		RankingEntryResponse self = rankingRepository.findStudent(roomId, studentId)
+		RankingEntryResponse me = rankingRepository.findStudent(roomId, studentId)
 				.map(row -> toEntry(row, studentId))
 				.orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ROOM_NOT_FOUND", "Room was not found."));
 		return new RankingResponse(
-				content, self, ranking.getNumber(), ranking.getSize(), ranking.getTotalElements(), ranking.getTotalPages()
+				content, me, ranking.getNumber(), ranking.getSize(), ranking.getTotalElements(), ranking.getTotalPages()
 		);
 	}
 
 	@Transactional(readOnly = true)
-	public AchievementCollectionResponse achievements(UUID studentId, UUID roomId) {
+	public List<AchievementResponse> achievements(UUID studentId, UUID roomId) {
 		requireAccess(studentId, roomId);
 		RoomStudentProgress progress = progressRepository.findByRoomIdAndStudentId(roomId, studentId).orElse(null);
 		Map<AchievementCode, Instant> unlockedAt = new EnumMap<>(AchievementCode.class);
 		for (AchievementUnlock unlock : unlockRepository.findByRoomIdAndStudentId(roomId, studentId)) {
 			unlockedAt.put(unlock.getCode(), unlock.getUnlockedAt());
 		}
-		List<AchievementResponse> content = DEFINITIONS.stream()
+		return DEFINITIONS.stream()
 				.map(definition -> toAchievement(definition, progress, unlockedAt))
 				.toList();
-		return new AchievementCollectionResponse(content);
 	}
 
 	private void requireAccess(UUID studentId, UUID roomId) {
@@ -109,8 +107,8 @@ public class StudentGamificationService {
 
 	private RankingEntryResponse toEntry(RankingRowProjection row, UUID studentId) {
 		return new RankingEntryResponse(
-				row.getPosition(), row.getStudentId(), anonymize(row.getFullName()), row.getTotalXp(),
-				row.getTotalStars(), row.getLevel(), row.getStudentId().equals(studentId)
+				row.getPosition(), row.getStudentId(), anonymize(row.getFullName()), row.getXp(),
+				row.getStars(), row.getLessonsPassed(), row.getStudentId().equals(studentId)
 		);
 	}
 
@@ -126,8 +124,8 @@ public class StudentGamificationService {
 			case UNLOCK -> instant == null ? 0 : 1;
 		};
 		return new AchievementResponse(
-				definition.code(), definition.title(), definition.description(), Math.min(source, definition.target()),
-				definition.target(), instant != null, instant
+				definition.code(), definition.title(), definition.description(), definition.icon(),
+				instant != null, instant, Math.min(source, definition.target()), definition.target()
 		);
 	}
 
@@ -147,6 +145,7 @@ public class StudentGamificationService {
 			AchievementCode code,
 			String title,
 			String description,
+			String icon,
 			int target,
 			ProgressKind progressKind
 	) {}

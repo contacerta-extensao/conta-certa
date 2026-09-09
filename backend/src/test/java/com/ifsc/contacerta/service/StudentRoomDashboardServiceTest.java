@@ -1,11 +1,11 @@
 package com.ifsc.contacerta.service;
 
-import com.ifsc.contacerta.dto.gamification.AchievementCollectionResponse;
 import com.ifsc.contacerta.dto.gamification.AchievementResponse;
 import com.ifsc.contacerta.dto.gamification.RankingEntryResponse;
 import com.ifsc.contacerta.dto.gamification.RankingResponse;
 import com.ifsc.contacerta.dto.studentdashboard.StudentFinancialTipResponse;
 import com.ifsc.contacerta.dto.studentdashboard.StudentRoomDashboardResponse;
+import com.ifsc.contacerta.dto.studentdashboard.StudentNextLessonResponse;
 import com.ifsc.contacerta.dto.studentlesson.LessonRulesResponse;
 import com.ifsc.contacerta.dto.studentlesson.StudentLessonPathResponse;
 import com.ifsc.contacerta.entity.Institution;
@@ -75,36 +75,46 @@ class StudentRoomDashboardServiceTest {
 		StudentLessonPathResponse available = lesson("Disponível", 1, AttemptAvailabilityStatus.AVAILABLE, 3L);
 		StudentLessonPathResponse inProgress = lesson("Em andamento", 2, AttemptAvailabilityStatus.IN_PROGRESS, 2L);
 		StudentLessonPathResponse retry = lesson("Tentativa", 3, AttemptAvailabilityStatus.FAILED, null);
-		RankingEntryResponse self = new RankingEntryResponse(2, student.getId(), "Aluno S.", 150, 5, 2, true);
+		RankingEntryResponse me = new RankingEntryResponse(2, student.getId(), "Aluno S.", 150, 5, 2, true);
 		StudentFinancialTipResponse tip = new StudentFinancialTipResponse(
 				UUID.randomUUID(), "Reserve", "Conteúdo", "https://example.com", LocalDate.of(2026, 9, 4)
 		);
 		stubAuthorizedAccess();
 		when(progressRepository.findByRoomIdAndStudentId(room.getId(), student.getId())).thenReturn(Optional.of(progress));
 		when(lessonService.path(student.getId(), room.getId())).thenReturn(List.of(available, inProgress, retry));
-		when(gamificationService.achievements(student.getId(), room.getId())).thenReturn(new AchievementCollectionResponse(List.of(
+		when(gamificationService.achievements(student.getId(), room.getId())).thenReturn(List.of(
 				achievement(AchievementCode.XP_100, true, Instant.parse("2026-09-01T00:00:00Z")),
 				achievement(AchievementCode.FIRST_PASS, true, Instant.parse("2026-09-03T00:00:00Z")),
 				achievement(AchievementCode.PASSED_5, true, Instant.parse("2026-09-02T00:00:00Z")),
 				achievement(AchievementCode.XP_500, true, Instant.parse("2026-09-01T00:00:00Z")),
 				achievement(AchievementCode.XP_1000, false, null)
-		)));
+		));
 		when(gamificationService.ranking(student.getId(), room.getId(), 0, 1))
-				.thenReturn(new RankingResponse(List.of(self), self, 0, 1, 1, 1));
+				.thenReturn(new RankingResponse(List.of(me), me, 0, 1, 12, 12));
 		when(financialTipService.currentTip()).thenReturn(tip);
 
 		StudentRoomDashboardResponse response = service.dashboard(student.getId(), room.getId());
 
 		assertThat(response.room().progressPercent()).isEqualTo(66);
-		assertThat(response.progress()).extracting(
-				value -> value.totalXp(), value -> value.level(), value -> value.levelProgressPercent(),
-				value -> value.totalStars(), value -> value.completedLessons(), value -> value.passedLessons(), value -> value.totalLessons()
-		).containsExactly(150, 2, 50, 5, 3, 2, 3);
-		assertThat(response.nextLesson()).isEqualTo(inProgress);
+		assertThat(response).extracting(
+				StudentRoomDashboardResponse::progressPercent,
+				StudentRoomDashboardResponse::level,
+				StudentRoomDashboardResponse::xpTotal,
+				StudentRoomDashboardResponse::levelProgressPercent,
+				StudentRoomDashboardResponse::xpToNextLevel,
+				StudentRoomDashboardResponse::starsTotal,
+				StudentRoomDashboardResponse::starsPossible,
+				StudentRoomDashboardResponse::lessonsCompleted,
+				StudentRoomDashboardResponse::lessonsTotal,
+				StudentRoomDashboardResponse::rankingPosition,
+				StudentRoomDashboardResponse::rankingParticipants
+		).containsExactly(66, 2, 150, 50, 50, 5, 9, 2, 3, 2L, 12L);
+		assertThat(response.nextLesson()).isEqualTo(new StudentNextLessonResponse(
+				inProgress.assignmentId(), inProgress.lessonId(), inProgress.title(), inProgress.order(), null
+		));
 		assertThat(response.recentAchievements()).extracting(AchievementResponse::code)
 				.containsExactly(AchievementCode.FIRST_PASS, AchievementCode.PASSED_5, AchievementCode.XP_100);
-		assertThat(response.financialTip()).isEqualTo(tip);
-		assertThat(response.ranking()).isEqualTo(self);
+		assertThat(response.tipOfDay()).isEqualTo(tip);
 	}
 
 	@Test
@@ -115,19 +125,28 @@ class StudentRoomDashboardServiceTest {
 				lesson("Bloqueada", 1, AttemptAvailabilityStatus.LOCKED, 0L),
 				lesson("Esgotada", 2, AttemptAvailabilityStatus.FAILED, 0L)
 		));
-		when(gamificationService.achievements(student.getId(), room.getId()))
-				.thenReturn(new AchievementCollectionResponse(List.of()));
+		when(gamificationService.achievements(student.getId(), room.getId())).thenReturn(List.of());
 		when(gamificationService.ranking(student.getId(), room.getId(), 0, 1))
 				.thenReturn(new RankingResponse(List.of(), null, 0, 1, 0, 0));
 
 		StudentRoomDashboardResponse response = service.dashboard(student.getId(), room.getId());
 
 		assertThat(response.room().progressPercent()).isZero();
-		assertThat(response.progress()).extracting(
-				value -> value.totalXp(), value -> value.level(), value -> value.levelProgressPercent(),
-				value -> value.totalStars(), value -> value.completedLessons(), value -> value.passedLessons(), value -> value.totalLessons()
-		).containsExactly(0, 1, 0, 0, 0, 0, 2);
+		assertThat(response).extracting(
+				StudentRoomDashboardResponse::progressPercent,
+				StudentRoomDashboardResponse::level,
+				StudentRoomDashboardResponse::xpTotal,
+				StudentRoomDashboardResponse::levelProgressPercent,
+				StudentRoomDashboardResponse::xpToNextLevel,
+				StudentRoomDashboardResponse::starsTotal,
+				StudentRoomDashboardResponse::starsPossible,
+				StudentRoomDashboardResponse::lessonsCompleted,
+				StudentRoomDashboardResponse::lessonsTotal,
+				StudentRoomDashboardResponse::rankingPosition,
+				StudentRoomDashboardResponse::rankingParticipants
+		).containsExactly(0, 1, 0, 0, 100, 0, 6, 0, 2, null, 0L);
 		assertThat(response.nextLesson()).isNull();
+		assertThat(response.tipOfDay()).isNull();
 	}
 
 	@Test
@@ -157,7 +176,7 @@ class StudentRoomDashboardServiceTest {
 	}
 
 	private AchievementResponse achievement(AchievementCode code, boolean unlocked, Instant unlockedAt) {
-		return new AchievementResponse(code, code.name(), "Descrição", 1, 1, unlocked, unlockedAt);
+		return new AchievementResponse(code, code.name(), "Descrição", "pi pi-star-fill", unlocked, unlockedAt, 1, 1);
 	}
 
 	private void assertApiError(Runnable action, HttpStatus status, String code) {

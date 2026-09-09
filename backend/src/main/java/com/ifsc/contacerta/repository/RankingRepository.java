@@ -22,9 +22,9 @@ public interface RankingRepository extends Repository<RoomMembership, UUID> {
 					) as position,
 					student.id as "studentId",
 					student.full_name as "fullName",
-					coalesce(progress.total_xp, 0) as "totalXp",
-					coalesce(progress.total_best_stars, 0) as "totalStars",
-					coalesce(progress.level, 1) as level
+					coalesce(progress.total_xp, 0) as xp,
+					coalesce(progress.total_best_stars, 0) as stars,
+					coalesce(progress.passed_assignment_count, 0) as "lessonsPassed"
 				from room_memberships membership
 				join users student on student.id = membership.student_id
 				left join room_student_progress progress
@@ -41,7 +41,7 @@ public interface RankingRepository extends Repository<RoomMembership, UUID> {
 				where membership.room_id = :roomId
 					and membership.status = 'ACTIVE'
 			)
-			select position, "studentId", "fullName", "totalXp", "totalStars", level
+			select position, "studentId", "fullName", xp, stars, "lessonsPassed"
 			from ranked
 			order by position
 			""", countQuery = """
@@ -62,9 +62,9 @@ public interface RankingRepository extends Repository<RoomMembership, UUID> {
 					) as position,
 					student.id as "studentId",
 					student.full_name as "fullName",
-					coalesce(progress.total_xp, 0) as "totalXp",
-					coalesce(progress.total_best_stars, 0) as "totalStars",
-					coalesce(progress.level, 1) as level
+					coalesce(progress.total_xp, 0) as xp,
+					coalesce(progress.total_best_stars, 0) as stars,
+					coalesce(progress.passed_assignment_count, 0) as "lessonsPassed"
 				from room_memberships membership
 				join users student on student.id = membership.student_id
 				left join room_student_progress progress
@@ -81,7 +81,7 @@ public interface RankingRepository extends Repository<RoomMembership, UUID> {
 				where membership.room_id = :roomId
 					and membership.status = 'ACTIVE'
 			)
-			select position, "studentId", "fullName", "totalXp", "totalStars", level
+			select position, "studentId", "fullName", xp, stars, "lessonsPassed"
 			from ranked
 			where "studentId" = :studentId
 			""", nativeQuery = true)

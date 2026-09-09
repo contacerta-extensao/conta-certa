@@ -156,7 +156,12 @@ class StudentRoomControllerTest extends PostgresIntegrationTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.room.id").value(room.getId().toString()))
 				.andExpect(jsonPath("$.room.archived").value(true))
-				.andExpect(jsonPath("$.progress.level").value(1));
+				.andExpect(jsonPath("$.level").value(1))
+				.andExpect(jsonPath("$.xpTotal").value(0))
+				.andExpect(jsonPath("$.xpToNextLevel").value(100))
+				.andExpect(jsonPath("$.lessonsCompleted").value(0))
+				.andExpect(jsonPath("$.rankingPosition").doesNotExist())
+				.andExpect(jsonPath("$.rankingParticipants").value(1));
 	}
 
 	@Test

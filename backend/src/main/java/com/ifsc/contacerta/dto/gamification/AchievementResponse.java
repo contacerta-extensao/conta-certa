@@ -8,8 +8,9 @@ public record AchievementResponse(
 		AchievementCode code,
 		String title,
 		String description,
-		int current,
-		int target,
+		String icon,
 		boolean unlocked,
-		Instant unlockedAt
+		Instant unlockedAt,
+		int progressCurrent,
+		int progressTarget
 ) {}

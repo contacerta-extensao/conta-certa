@@ -48,13 +48,13 @@ class RankingRepositoryTest extends PostgresIntegrationTest {
 				.extracting(RankingRowProjection::getPosition)
 				.containsExactly(1L, 2L);
 
-		RankingRowProjection self = rankingRepository.findStudent(
+		RankingRowProjection me = rankingRepository.findStudent(
 				fixture.room().getId(), fixture.zeroProgress().getId()
 		).orElseThrow();
-		assertThat(self.getPosition()).isEqualTo(3);
-		assertThat(self.getTotalXp()).isZero();
-		assertThat(self.getTotalStars()).isZero();
-		assertThat(self.getLevel()).isEqualTo(1);
+		assertThat(me.getPosition()).isEqualTo(3);
+		assertThat(me.getXp()).isZero();
+		assertThat(me.getStars()).isZero();
+		assertThat(me.getLessonsPassed()).isZero();
 	}
 
 	@Test

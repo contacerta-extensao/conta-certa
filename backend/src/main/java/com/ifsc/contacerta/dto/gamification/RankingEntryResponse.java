@@ -6,8 +6,8 @@ public record RankingEntryResponse(
 		long position,
 		UUID studentId,
 		String displayName,
-		int totalXp,
-		int totalStars,
-		int level,
-		boolean currentStudent
+		int xp,
+		int stars,
+		int lessonsPassed,
+		boolean me
 ) {}

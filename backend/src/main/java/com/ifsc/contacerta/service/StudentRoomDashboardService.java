@@ -1,7 +1,8 @@
 package com.ifsc.contacerta.service;
 
 import com.ifsc.contacerta.dto.gamification.AchievementResponse;
-import com.ifsc.contacerta.dto.studentdashboard.StudentDashboardProgressResponse;
+import com.ifsc.contacerta.dto.gamification.RankingResponse;
+import com.ifsc.contacerta.dto.studentdashboard.StudentNextLessonResponse;
 import com.ifsc.contacerta.dto.studentdashboard.StudentRoomDashboardResponse;
 import com.ifsc.contacerta.dto.studentlesson.StudentLessonPathResponse;
 import com.ifsc.contacerta.entity.RoomMembership;
@@ -29,6 +30,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class StudentRoomDashboardService {
 
+	private static final int XP_PER_LEVEL = 100;
+	private static final int MAX_STARS_PER_LESSON = 3;
+
 	private final UserRepository userRepository;
 	private final RoomMembershipRepository membershipRepository;
 	private final RoomStudentProgressRepository progressRepository;
@@ -42,16 +46,29 @@ public class StudentRoomDashboardService {
 		RoomMembership membership = requireMembership(student, roomId);
 		List<StudentLessonPathResponse> path = lessonService.path(studentId, roomId);
 		RoomStudentProgress progress = progressRepository.findByRoomIdAndStudentId(roomId, studentId).orElse(null);
-		StudentDashboardProgressResponse progressResponse = progressResponse(progress, path.size());
-		int roomProgressPercent = progressPercent(progressResponse.passedLessons(), path.size());
+
+		int lessonsTotal = path.size();
+		int totalXp = progress == null ? 0 : progress.getTotalXp();
+		int lessonsCompleted = progress == null ? 0 : progress.getPassedAssignmentCount();
+		int progressPercent = progressPercent(lessonsCompleted, lessonsTotal);
+		RankingResponse ranking = gamificationService.ranking(studentId, roomId, 0, 1);
 
 		return new StudentRoomDashboardResponse(
-				RoomMapper.toStudentResponse(membership.getRoom(), membership.getStatus(), roomProgressPercent),
-				progressResponse,
+				RoomMapper.toStudentResponse(membership.getRoom(), membership.getStatus(), progressPercent),
+				progressPercent,
+				progress == null ? 1 : progress.getLevel(),
+				totalXp,
+				totalXp % XP_PER_LEVEL,
+				XP_PER_LEVEL - totalXp % XP_PER_LEVEL,
+				progress == null ? 0 : progress.getTotalBestStars(),
+				lessonsTotal * MAX_STARS_PER_LESSON,
+				lessonsCompleted,
+				lessonsTotal,
+				rankingPosition(progress, ranking),
+				ranking.totalElements(),
 				nextLesson(path),
 				recentAchievements(studentId, roomId),
-				financialTipService.currentTip(),
-				gamificationService.ranking(studentId, roomId, 0, 1).self()
+				financialTipService.currentTip()
 		);
 	}
 
@@ -77,25 +94,24 @@ public class StudentRoomDashboardService {
 		return membership;
 	}
 
-	private StudentDashboardProgressResponse progressResponse(RoomStudentProgress progress, int totalLessons) {
-		int totalXp = progress == null ? 0 : progress.getTotalXp();
-		int level = progress == null ? 1 : progress.getLevel();
-		int totalStars = progress == null ? 0 : progress.getTotalBestStars();
-		int completedLessons = progress == null ? 0 : progress.getCompletedAssignmentCount();
-		int passedLessons = progress == null ? 0 : progress.getPassedAssignmentCount();
-		return new StudentDashboardProgressResponse(
-				totalXp, level, totalXp % 100, totalStars, completedLessons, passedLessons, totalLessons
-		);
+	/** Sem nenhuma lição finalizada não há classificação a exibir. */
+	private Long rankingPosition(RoomStudentProgress progress, RankingResponse ranking) {
+		return progress == null || progress.getCompletedAssignmentCount() == 0
+				? null
+				: ranking.me().position();
 	}
 
 	private int progressPercent(int passedLessons, int totalLessons) {
 		return totalLessons == 0 ? 0 : passedLessons * 100 / totalLessons;
 	}
 
-	private StudentLessonPathResponse nextLesson(List<StudentLessonPathResponse> path) {
+	private StudentNextLessonResponse nextLesson(List<StudentLessonPathResponse> path) {
 		return path.stream().filter(lesson -> lesson.availability() == AttemptAvailabilityStatus.IN_PROGRESS).findFirst()
 				.or(() -> path.stream().filter(lesson -> lesson.availability() == AttemptAvailabilityStatus.AVAILABLE).findFirst())
 				.or(() -> path.stream().filter(this::canRetry).findFirst())
+				.map(lesson -> new StudentNextLessonResponse(
+						lesson.assignmentId(), lesson.lessonId(), lesson.title(), lesson.order(), lesson.activeAttemptId()
+				))
 				.orElse(null);
 	}
 
@@ -105,7 +121,7 @@ public class StudentRoomDashboardService {
 	}
 
 	private List<AchievementResponse> recentAchievements(UUID studentId, UUID roomId) {
-		return gamificationService.achievements(studentId, roomId).content().stream()
+		return gamificationService.achievements(studentId, roomId).stream()
 				.filter(AchievementResponse::unlocked)
 				.sorted(Comparator.comparing(
 						AchievementResponse::unlockedAt,
