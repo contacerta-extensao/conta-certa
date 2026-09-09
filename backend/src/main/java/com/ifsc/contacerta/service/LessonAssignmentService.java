@@ -493,8 +493,11 @@ public class LessonAssignmentService {
 		return new LessonAssignmentResponse(
 				assignment.getId(),
 				assignment.getRoom().getId(),
-				assignment.getLesson().getId(),
-				assignment.getLesson().getTitle(),
+				new LessonAssignmentResponse.LessonReferenceResponse(
+						assignment.getLesson().getId(),
+						assignment.getLesson().getTitle(),
+						activeQuestionCount
+				),
 				assignment.getPosition(),
 				assignment.getStatus(),
 				assignment.getAvailableFrom(),
@@ -504,7 +507,7 @@ public class LessonAssignmentService {
 				assignment.getQuestionCount(),
 				assignment.isShuffleQuestions(),
 				assignment.isShuffleOptions(),
-				activeQuestionCount,
+				canDelete(assignment),
 				assignment.getCreatedAt(),
 				assignment.getUpdatedAt(),
 				assignment.getVersion()

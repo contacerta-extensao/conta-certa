@@ -97,16 +97,18 @@ class TeacherLessonAssignmentControllerTest extends PostgresIntegrationTest {
 						"Location",
 						matchesPattern("/teacher/rooms/[0-9a-f-]{36}/lesson-assignments/[0-9a-f-]{36}")
 				))
-				.andExpect(jsonPath("$.lessonId").value(fixture.lesson().getId().toString()))
+				.andExpect(jsonPath("$.lesson.id").value(fixture.lesson().getId().toString()))
 				.andExpect(jsonPath("$.position").value(1))
 				.andExpect(jsonPath("$.timeLimitMinutes").value(30))
-				.andExpect(jsonPath("$.maxAttempts").value(3));
+				.andExpect(jsonPath("$.maxAttempts").value(3))
+				.andExpect(jsonPath("$.removable").value(true));
 
 		mockMvc.perform(get("/teacher/rooms/{roomId}/lesson-assignments", fixture.room().getId())
 					.header("Authorization", bearer(fixture.login())))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$[0].lessonTitle").value(fixture.lesson().getTitle()))
-				.andExpect(jsonPath("$[0].activeQuestionCount").value(1));
+				.andExpect(jsonPath("$[0].lesson.title").value(fixture.lesson().getTitle()))
+				.andExpect(jsonPath("$[0].lesson.activeQuestionCount").value(1))
+				.andExpect(jsonPath("$[0].lessonId").doesNotExist());
 	}
 
 	@Test

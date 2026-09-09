@@ -68,7 +68,14 @@ public class ExtraAttemptGrantService {
 		ExtraAttemptGrant grant = grantRepository.save(new ExtraAttemptGrant(assignment, student, teacher, request.quantity(), Instant.now(clock)));
 		long granted = grantRepository.sumQuantityByAssignmentIdAndStudentId(assignmentId, studentId);
 		long used = attemptRepository.countByAssignmentIdAndStudentId(assignmentId, studentId);
-		return new ExtraAttemptGrantResponse(grant.getId(), Math.toIntExact(granted), used, Math.max(0, assignment.getMaxAttempts() + granted - used));
+		return new ExtraAttemptGrantResponse(
+				grant.getId(),
+				assignmentId,
+				studentId,
+				Math.toIntExact(granted),
+				used,
+				Math.max(0, assignment.getMaxAttempts() + granted - used)
+		);
 	}
 
 	private ApiException error(HttpStatus status, String code, String message) {
