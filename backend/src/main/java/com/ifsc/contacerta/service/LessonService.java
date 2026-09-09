@@ -10,18 +10,25 @@ import com.ifsc.contacerta.entity.Question;
 import com.ifsc.contacerta.entity.User;
 import com.ifsc.contacerta.exception.ApiException;
 import com.ifsc.contacerta.model.AccountStatus;
+import com.ifsc.contacerta.model.ContentStatus;
 import com.ifsc.contacerta.model.Role;
+import com.ifsc.contacerta.repository.LessonAssignmentRepository;
+import com.ifsc.contacerta.repository.LessonCountProjection;
 import com.ifsc.contacerta.repository.LessonRepository;
 import com.ifsc.contacerta.repository.QuestionRepository;
 import com.ifsc.contacerta.repository.UserRepository;
+import com.ifsc.contacerta.specification.LessonSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +37,7 @@ public class LessonService {
 	private final UserRepository userRepository;
 	private final LessonRepository lessonRepository;
 	private final QuestionRepository questionRepository;
+	private final LessonAssignmentRepository assignmentRepository;
 
 	@Transactional
 	public LessonDetailResponse create(UUID teacherId, CreateLessonRequest request) {
@@ -58,9 +66,29 @@ public class LessonService {
 	}
 
 	@Transactional(readOnly = true)
-	public PageResponse<LessonSummaryResponse> list(UUID teacherId, Pageable pageable) {
+	public PageResponse<LessonSummaryResponse> list(
+			UUID teacherId,
+			String search,
+			ContentStatus status,
+			Pageable pageable
+	) {
 		requireActiveTeacher(teacherId);
-		return PageResponse.from(lessonRepository.findByTeacherId(teacherId, pageable).map(this::toSummaryResponse));
+		Page<Lesson> lessons = lessonRepository
+				.findAll(LessonSpecification.ownedBy(teacherId, search, status), pageable);
+		List<UUID> lessonIds = lessons.getContent().stream().map(Lesson::getId).toList();
+		Map<UUID, Long> questionCounts = countsByLesson(
+				lessonIds.isEmpty() ? List.of() : questionRepository.countActiveByLessonIds(lessonIds)
+		);
+		Map<UUID, Long> assignmentCounts = countsByLesson(
+				lessonIds.isEmpty()
+						? List.of()
+						: assignmentRepository.countByLessonIdsAndStatusNot(lessonIds, ContentStatus.ARCHIVED)
+		);
+		return PageResponse.from(lessons.map(lesson -> toSummaryResponse(
+				lesson,
+				questionCounts.getOrDefault(lesson.getId(), 0L),
+				assignmentCounts.getOrDefault(lesson.getId(), 0L)
+		)));
 	}
 
 	@Transactional(readOnly = true)
@@ -74,7 +102,7 @@ public class LessonService {
 		requireActiveTeacher(teacherId);
 		Lesson lesson = requireOwnedLesson(teacherId, lessonId);
 		requireVersion(lesson, request.version());
-		if (lesson.getStatus() == com.ifsc.contacerta.model.ContentStatus.ARCHIVED) {
+		if (lesson.getStatus() == ContentStatus.ARCHIVED) {
 			throw new ApiException(HttpStatus.UNPROCESSABLE_CONTENT, "LESSON_ARCHIVED", "Archived lessons are read-only.");
 		}
 		lesson.update(request.title() == null ? lesson.getTitle() : request.title(), request.summary(), request.theoryMarkdown() == null ? lesson.getTheoryMarkdown() : request.theoryMarkdown());
@@ -126,8 +154,29 @@ public class LessonService {
 		}
 	}
 
-	private LessonSummaryResponse toSummaryResponse(Lesson lesson) {
-		return new LessonSummaryResponse(lesson.getId(), lesson.getTitle(), lesson.getSummary(), lesson.getStatus(), 0, 0, lesson.getCreatedAt(), lesson.getUpdatedAt(), lesson.getVersion());
+	/** Uma consulta agregada por página, em vez de duas contagens por lição. */
+	private Map<UUID, Long> countsByLesson(List<LessonCountProjection> counts) {
+		return counts.stream().collect(Collectors.toMap(
+				LessonCountProjection::getLessonId, LessonCountProjection::getTotal
+		));
+	}
+
+	private LessonSummaryResponse toSummaryResponse(
+			Lesson lesson,
+			long questionCount,
+			long assignmentCount
+	) {
+		return new LessonSummaryResponse(
+				lesson.getId(),
+				lesson.getTitle(),
+				lesson.getSummary(),
+				lesson.getStatus(),
+				questionCount,
+				assignmentCount,
+				lesson.getCreatedAt(),
+				lesson.getUpdatedAt(),
+				lesson.getVersion()
+		);
 	}
 
 	private LessonDetailResponse toDetailResponse(Lesson lesson) {
@@ -137,8 +186,8 @@ public class LessonService {
 				lesson.getSummary(),
 				lesson.getTheoryMarkdown(),
 				lesson.getStatus(),
-				0,
-				0,
+				questionRepository.countByLessonIdAndActiveTrue(lesson.getId()),
+				assignmentRepository.countByLessonIdAndStatusNot(lesson.getId(), ContentStatus.ARCHIVED),
 				lesson.getCreatedAt(),
 				lesson.getUpdatedAt(),
 				lesson.getVersion()

@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,6 +29,20 @@ public interface LessonAssignmentRepository extends JpaRepository<LessonAssignme
 	boolean existsByRoomIdAndLessonId(UUID roomId, UUID lessonId);
 
 	boolean existsByLessonId(UUID lessonId);
+
+	/** Salas que ainda usam a lição: atribuição arquivada não conta. */
+	long countByLessonIdAndStatusNot(UUID lessonId, ContentStatus status);
+
+	@Query("""
+			select assignment.lesson.id as lessonId, count(assignment) as total
+			from LessonAssignment assignment
+			where assignment.lesson.id in :lessonIds and assignment.status <> :excludedStatus
+			group by assignment.lesson.id
+			""")
+	List<LessonCountProjection> countByLessonIdsAndStatusNot(
+			@Param("lessonIds") Collection<UUID> lessonIds,
+			@Param("excludedStatus") ContentStatus excludedStatus
+	);
 
 	List<LessonAssignment> findByRoomIdAndStatusOrderByPositionAsc(UUID roomId, ContentStatus status);
 
