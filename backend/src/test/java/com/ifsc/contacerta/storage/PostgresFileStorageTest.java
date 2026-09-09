@@ -7,7 +7,7 @@ import com.ifsc.contacerta.model.AccountStatus;
 import com.ifsc.contacerta.model.Role;
 import com.ifsc.contacerta.repository.InstitutionRepository;
 import com.ifsc.contacerta.repository.UserRepository;
-import com.ifsc.contacerta.service.MaterialFileValidator;
+import com.ifsc.contacerta.model.ValidatedUpload;
 import com.ifsc.contacerta.support.PostgresIntegrationTest;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
@@ -45,7 +45,7 @@ class PostgresFileStorageTest extends PostgresIntegrationTest {
 
 		StoredFile stored = storage.store(
 				teacher,
-				new MaterialFileValidator.ValidatedMaterialFile("aula.pdf", "application/pdf", content),
+				new ValidatedUpload("aula.pdf", "application/pdf", content),
 				Instant.parse("2026-08-28T12:00:00Z")
 		);
 		entityManager.flush();

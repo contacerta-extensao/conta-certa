@@ -1,6 +1,7 @@
 package com.ifsc.contacerta.service;
 
 import com.ifsc.contacerta.exception.ApiException;
+import com.ifsc.contacerta.model.ValidatedUpload;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,7 +27,7 @@ public class MaterialFileValidator {
 			(byte) 0xA1, (byte) 0xB1, 0x1A, (byte) 0xE1
 	};
 
-	public ValidatedMaterialFile validate(MultipartFile file) {
+	public ValidatedUpload validate(MultipartFile file) {
 		if (file == null || file.isEmpty()) {
 			throw error(HttpStatus.UNPROCESSABLE_CONTENT, "INVALID_MEDIA", "A file is required.");
 		}
@@ -50,7 +51,7 @@ public class MaterialFileValidator {
 		if (!hasExpectedSignature(extension, content)) {
 			throw unsupported();
 		}
-		return new ValidatedMaterialFile(fileName, expectedContentType, content);
+		return new ValidatedUpload(fileName, expectedContentType, content);
 	}
 
 	private String safeFileName(String original) {
@@ -118,16 +119,5 @@ public class MaterialFileValidator {
 
 	private ApiException error(HttpStatus status, String code, String message) {
 		return new ApiException(status, code, message);
-	}
-
-	public record ValidatedMaterialFile(String fileName, String contentType, byte[] content) {
-		public ValidatedMaterialFile {
-			content = Arrays.copyOf(content, content.length);
-		}
-
-		@Override
-		public byte[] content() {
-			return Arrays.copyOf(content, content.length);
-		}
 	}
 }

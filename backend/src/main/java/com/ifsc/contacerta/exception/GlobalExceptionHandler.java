@@ -11,6 +11,7 @@ import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -46,6 +47,20 @@ public class GlobalExceptionHandler {
 				"One or more fields are invalid.",
 				request,
 				fieldErrors
+		);
+	}
+
+	@ExceptionHandler(MaxUploadSizeExceededException.class)
+	public ResponseEntity<ProblemDetail> handleUploadTooLarge(
+			MaxUploadSizeExceededException exception,
+			HttpServletRequest request
+	) {
+		return response(
+				HttpStatus.PAYLOAD_TOO_LARGE,
+				"FILE_TOO_LARGE",
+				"Upload exceeds the maximum accepted size.",
+				request,
+				null
 		);
 	}
 

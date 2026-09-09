@@ -51,6 +51,14 @@ class SecurityConfigTest extends PostgresIntegrationTest {
 	}
 
 	@Test
+	void devePermitirLeituraPublicaDeImagemDaLicao() throws Exception {
+		mockMvc.perform(get("/lesson-images/{imageId}", UUID.randomUUID()))
+				.andExpect(status().isNotFound())
+				.andExpect(content().contentType("application/problem+json"))
+				.andExpect(jsonPath("$.code").value("IMAGE_NOT_FOUND"));
+	}
+
+	@Test
 	void deveExigirTokenDeAcessoNasRotasProtegidas() throws Exception {
 		mockMvc.perform(get("/me"))
 				.andExpect(status().isUnauthorized())
