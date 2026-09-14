@@ -66,6 +66,17 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "development-real": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.real.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -81,6 +92,9 @@
             },
             "development": {
               "buildTarget": "frontend:build:development"
+            },
+            "real": {
+              "buildTarget": "frontend:build:development-real"
             }
           },
           "defaultConfiguration": "development"

@@ -19,14 +19,20 @@ Por padrão o app sobe com o **mock da API ligado** e não precisa do backend.
 
 ### Contra o backend real
 
-Em `src/environments/environment.ts`, troque:
+Suba o PostgreSQL e o backend na porta 8080 e execute:
 
-```ts
-useMockApi: false,
+```bash
+npm run start:real # http://localhost:4200
 ```
 
-Essa é a **única** mudança necessária. O `ng serve` já encaminha `/api/v1` para
-`http://localhost:8080` via `proxy.conf.json`.
+Esse comando usa a mesma API, autenticação e jornada do aluno do build normal,
+mas desativa o interceptor de mock por meio de uma configuração Angular própria.
+O `proxy.conf.json` encaminha `/api/v1` para `http://localhost:8080`.
+
+O backend não cria dados de demonstração de alunos, salas ou lições. Para testar
+o fluxo real, use dados existentes no PostgreSQL ou cadastre-os pelos fluxos de
+administração e conta documentados nas specs. O build correspondente pode ser
+gerado com `npm run build:real`.
 
 ## Contas de demonstração (mock)
 
@@ -51,7 +57,9 @@ do zero, limpe o storage da aba ou abra uma aba anônima.
 | Comando | O que faz |
 |---|---|
 | `npm start` | Servidor de desenvolvimento |
+| `npm run start:real` | Servidor de desenvolvimento contra a API real |
 | `npm run build` | Build de produção em `dist/` |
+| `npm run build:real` | Build de desenvolvimento usando a API real |
 | `npm test` | Testes em modo watch |
 | `npm run test:ci` | Testes uma vez |
 | `npm run lint` | ESLint (TS + templates) |
