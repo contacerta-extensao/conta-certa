@@ -46,9 +46,9 @@ class LessonCountQueryTest extends PostgresIntegrationTest {
 		));
 		Lesson used = persist(new Lesson("Juros compostos", null, "# Teoria", teacher));
 		Lesson unused = persist(new Lesson("Porcentagem", null, "# Teoria", teacher));
-		persist(question(used, "Ativa 1"));
-		persist(question(used, "Ativa 2"));
-		Question archived = persist(question(used, "Arquivada"));
+		persist(question(used, "Ativa 1", 1));
+		persist(question(used, "Ativa 2", 2));
+		Question archived = persist(question(used, "Arquivada", 3));
 		archived.archive();
 		Room firstRoom = persist(room("SAL001", teacher, institution));
 		Room secondRoom = persist(room("SAL002", teacher, institution));
@@ -85,13 +85,14 @@ class LessonCountQueryTest extends PostgresIntegrationTest {
 		return entity;
 	}
 
-	private Question question(Lesson lesson, String prompt) {
-		return Question.choice(
+	private Question question(Lesson lesson, String prompt, int position) {
+		return Question.create(
 				lesson,
 				QuestionType.SINGLE_CHOICE,
 				prompt,
 				null,
-				List.of(new QuestionOptionData("1%", true), new QuestionOptionData("10%", false))
+				List.of(new QuestionOptionData("1%", true), new QuestionOptionData("10%", false)),
+				position
 		);
 	}
 
