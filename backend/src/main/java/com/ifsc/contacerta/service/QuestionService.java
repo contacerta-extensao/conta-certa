@@ -12,6 +12,8 @@ import com.ifsc.contacerta.entity.Question;
 import com.ifsc.contacerta.entity.QuestionOptionData;
 import com.ifsc.contacerta.exception.ApiException;
 import com.ifsc.contacerta.model.NumericUnit;
+import com.ifsc.contacerta.model.AuditAction;
+import com.ifsc.contacerta.model.AuditTargetType;
 import com.ifsc.contacerta.model.ContentStatus;
 import com.ifsc.contacerta.model.QuestionType;
 import com.ifsc.contacerta.repository.LessonAssignmentRepository;
@@ -37,6 +39,7 @@ public class QuestionService {
 	private final LessonRepository lessonRepository;
 	private final QuestionRepository questionRepository;
 	private final LessonAssignmentRepository lessonAssignmentRepository;
+	private final AuditService auditService;
 
 	@Transactional
 	public QuestionResponse create(UUID teacherId, UUID lessonId, CreateQuestionRequest request) {
@@ -81,6 +84,7 @@ public class QuestionService {
 			return;
 		}
 		question.archive();
+		auditService.record(teacherId, AuditAction.QUESTION_ARCHIVED, AuditTargetType.QUESTION, question.getId());
 	}
 
 	@Transactional

@@ -6,6 +6,8 @@ import com.ifsc.contacerta.entity.ExtraAttemptGrant;
 import com.ifsc.contacerta.entity.LessonAssignment;
 import com.ifsc.contacerta.exception.ApiException;
 import com.ifsc.contacerta.model.AccountStatus;
+import com.ifsc.contacerta.model.AuditAction;
+import com.ifsc.contacerta.model.AuditTargetType;
 import com.ifsc.contacerta.model.MembershipStatus;
 import com.ifsc.contacerta.model.Role;
 import com.ifsc.contacerta.repository.AttemptRepository;
@@ -31,6 +33,7 @@ public class ExtraAttemptGrantService {
 	private final ExtraAttemptGrantRepository grantRepository;
 	private final AttemptRepository attemptRepository;
 	private final Clock clock;
+	private final AuditService auditService;
 
 	@Transactional
 	public ExtraAttemptGrantResponse grant(UUID teacherId, UUID assignmentId, UUID studentId, CreateExtraAttemptGrantRequest request) {
@@ -66,6 +69,12 @@ public class ExtraAttemptGrantService {
 				.filter(candidate -> candidate.getStatus() == MembershipStatus.ACTIVE)
 				.orElseThrow(() -> error(HttpStatus.NOT_FOUND, "MEMBERSHIP_NOT_FOUND", "Membership was not found."));
 		ExtraAttemptGrant grant = grantRepository.save(new ExtraAttemptGrant(assignment, student, teacher, request.quantity(), Instant.now(clock)));
+		auditService.record(
+				teacherId,
+				AuditAction.EXTRA_ATTEMPT_GRANTED,
+				AuditTargetType.EXTRA_ATTEMPT_GRANT,
+				grant.getId()
+		);
 		long granted = grantRepository.sumQuantityByAssignmentIdAndStudentId(assignmentId, studentId);
 		long used = attemptRepository.countByAssignmentIdAndStudentId(assignmentId, studentId);
 		return new ExtraAttemptGrantResponse(

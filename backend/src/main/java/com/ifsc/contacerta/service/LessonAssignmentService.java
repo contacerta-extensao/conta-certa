@@ -11,6 +11,8 @@ import com.ifsc.contacerta.entity.Room;
 import com.ifsc.contacerta.entity.User;
 import com.ifsc.contacerta.exception.ApiException;
 import com.ifsc.contacerta.model.AccountStatus;
+import com.ifsc.contacerta.model.AuditAction;
+import com.ifsc.contacerta.model.AuditTargetType;
 import com.ifsc.contacerta.model.ContentStatus;
 import com.ifsc.contacerta.model.Role;
 import com.ifsc.contacerta.repository.LessonAssignmentRepository;
@@ -48,6 +50,7 @@ public class LessonAssignmentService {
 	private final LessonAssignmentRepository assignmentRepository;
 	private final QuestionRepository questionRepository;
 	private final Clock clock;
+	private final AuditService auditService;
 
 	@Transactional(readOnly = true)
 	public List<LessonAssignmentResponse> list(UUID teacherId, UUID roomId) {
@@ -126,7 +129,16 @@ public class LessonAssignmentService {
 		if (status == ContentStatus.PUBLISHED) {
 			assignment.publish();
 		}
-		return toResponse(assignmentRepository.save(assignment), activeQuestionCount);
+		LessonAssignment saved = assignmentRepository.save(assignment);
+		if (status == ContentStatus.PUBLISHED) {
+			auditService.record(
+					teacherId,
+					AuditAction.LESSON_ASSIGNMENT_PUBLISHED,
+					AuditTargetType.LESSON_ASSIGNMENT,
+					saved.getId()
+			);
+		}
+		return toResponse(saved, activeQuestionCount);
 	}
 
 	@Transactional
@@ -173,6 +185,7 @@ public class LessonAssignmentService {
 				questionCount,
 				activeQuestionCount
 		);
+		ContentStatus previousStatus = assignment.getStatus();
 		assignment.configure(
 				status,
 				availableFrom,
@@ -183,6 +196,7 @@ public class LessonAssignmentService {
 				shuffleQuestions,
 				shuffleOptions
 		);
+		recordStatusTransition(teacherId, assignment, previousStatus);
 		assignmentRepository.flush();
 		return toResponse(assignment, activeQuestionCount);
 	}
@@ -355,6 +369,32 @@ public class LessonAssignmentService {
 		return assignment.getStatus() == ContentStatus.PUBLISHED
 				&& assignment.getAvailableFrom() != null
 				&& assignment.getAvailableFrom().isAfter(clock.instant());
+	}
+
+	private void recordStatusTransition(
+			UUID teacherId,
+			LessonAssignment assignment,
+			ContentStatus previousStatus
+	) {
+		if (assignment.getStatus() == previousStatus) {
+			return;
+		}
+		if (assignment.getStatus() == ContentStatus.PUBLISHED) {
+			auditService.record(
+					teacherId,
+					AuditAction.LESSON_ASSIGNMENT_PUBLISHED,
+					AuditTargetType.LESSON_ASSIGNMENT,
+					assignment.getId()
+			);
+		}
+		if (assignment.getStatus() == ContentStatus.ARCHIVED) {
+			auditService.record(
+					teacherId,
+					AuditAction.LESSON_ASSIGNMENT_ARCHIVED,
+					AuditTargetType.LESSON_ASSIGNMENT,
+					assignment.getId()
+			);
+		}
 	}
 
 	private void normalizePositions(List<LessonAssignment> assignments, int previousSize) {

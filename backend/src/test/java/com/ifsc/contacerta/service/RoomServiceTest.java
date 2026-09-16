@@ -10,6 +10,8 @@ import com.ifsc.contacerta.entity.Room;
 import com.ifsc.contacerta.entity.User;
 import com.ifsc.contacerta.exception.ApiException;
 import com.ifsc.contacerta.model.AccountStatus;
+import com.ifsc.contacerta.model.AuditAction;
+import com.ifsc.contacerta.model.AuditTargetType;
 import com.ifsc.contacerta.model.Grade;
 import com.ifsc.contacerta.model.MembershipStatus;
 import com.ifsc.contacerta.model.Role;
@@ -197,7 +199,11 @@ class RoomServiceTest {
 		);
 		Room room = room("1º ano A", null, Grade.HIGH_SCHOOL_1, List.of("Porcentagem"), 50, "ABC236", teacher, institution);
 		when(roomRepository.findByIdAndTeacherId(room.getId(), teacher.getId())).thenReturn(Optional.of(room));
-		RoomService service = service(mock(UserRepository.class), roomRepository, mock(JoinCodeGenerator.class));
+		AuditService auditService = mock(AuditService.class);
+		RoomService service = service(
+				mock(UserRepository.class), roomRepository, mock(JoinCodeGenerator.class),
+				mock(RoomMembershipRepository.class), auditService
+		);
 
 		var archived = service.archive(teacher.getId(), room.getId(), room.getVersion());
 		var firstArchivedAt = room.getArchivedAt();
@@ -206,6 +212,9 @@ class RoomServiceTest {
 		assertThat(archived.archived()).isTrue();
 		assertThat(archivedAgain.archived()).isTrue();
 		assertThat(firstArchivedAt).isNotNull().isEqualTo(room.getArchivedAt());
+		verify(auditService).record(
+				teacher.getId(), AuditAction.ROOM_ARCHIVED, AuditTargetType.ROOM, room.getId()
+		);
 		assertThatThrownBy(() -> service.update(teacher.getId(), room.getId(), new UpdateRoomRequest(
 				"Alteração bloqueada", null, Grade.HIGH_SCHOOL_1, List.of("Porcentagem"), 50, room.getVersion()
 		)))
@@ -226,11 +235,18 @@ class RoomServiceTest {
 		Room room = room("1º ano A", null, Grade.HIGH_SCHOOL_1, List.of("Porcentagem"), 50, "ABC237", teacher, institution);
 		when(roomRepository.findByIdAndTeacherId(room.getId(), teacher.getId())).thenReturn(Optional.of(room));
 		when(joinCodeGenerator.generateUnique()).thenReturn("XYZ789");
-		RoomService service = service(mock(UserRepository.class), roomRepository, joinCodeGenerator);
+		AuditService auditService = mock(AuditService.class);
+		RoomService service = service(
+				mock(UserRepository.class), roomRepository, joinCodeGenerator,
+				mock(RoomMembershipRepository.class), auditService
+		);
 
 		var response = service.regenerateCode(teacher.getId(), room.getId(), room.getVersion());
 
 		assertThat(response.joinCode()).isEqualTo("XYZ789");
+		verify(auditService).record(
+				teacher.getId(), AuditAction.ROOM_CODE_REGENERATED, AuditTargetType.ROOM, room.getId()
+		);
 	}
 
 	@Test
@@ -508,6 +524,25 @@ class RoomServiceTest {
 			JoinCodeGenerator joinCodeGenerator,
 			RoomMembershipRepository membershipRepository
 	) {
-		return new RoomService(userRepository, roomRepository, membershipRepository, joinCodeGenerator, joinCodeHasher);
+		return service(
+				userRepository, roomRepository, joinCodeGenerator, membershipRepository, mock(AuditService.class)
+		);
+	}
+
+	private RoomService service(
+			UserRepository userRepository,
+			RoomRepository roomRepository,
+			JoinCodeGenerator joinCodeGenerator,
+			RoomMembershipRepository membershipRepository,
+			AuditService auditService
+	) {
+		return new RoomService(
+				userRepository,
+				roomRepository,
+				membershipRepository,
+				joinCodeGenerator,
+				joinCodeHasher,
+				auditService
+		);
 	}
 }

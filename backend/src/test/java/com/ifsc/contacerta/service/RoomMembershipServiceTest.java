@@ -7,6 +7,8 @@ import com.ifsc.contacerta.entity.RoomMembership;
 import com.ifsc.contacerta.entity.User;
 import com.ifsc.contacerta.exception.ApiException;
 import com.ifsc.contacerta.model.AccountStatus;
+import com.ifsc.contacerta.model.AuditAction;
+import com.ifsc.contacerta.model.AuditTargetType;
 import com.ifsc.contacerta.model.Grade;
 import com.ifsc.contacerta.model.MembershipStatus;
 import com.ifsc.contacerta.model.Role;
@@ -249,13 +251,22 @@ class RoomMembershipServiceTest {
 		when(roomRepository.findByIdAndTeacherId(room.getId(), teacher.getId())).thenReturn(Optional.of(room));
 		when(membershipRepository.findByRoomIdAndStudentId(room.getId(), student.getId()))
 				.thenReturn(Optional.of(membership));
-		RoomMembershipService service = service(userRepository, roomRepository, membershipRepository);
+		AuditService auditService = mock(AuditService.class);
+		RoomMembershipService service = service(
+				userRepository, roomRepository, membershipRepository, auditService
+		);
 
 		service.remove(teacher.getId(), room.getId(), student.getId());
 
 		assertThat(membership.getStatus()).isEqualTo(MembershipStatus.REMOVED);
 		assertThat(membership.getRemovedBy()).isEqualTo(teacher);
 		assertThat(membership.getRemovedAt()).isNotNull();
+		verify(auditService).record(
+				teacher.getId(),
+				AuditAction.ROOM_STUDENT_REMOVED,
+				AuditTargetType.ROOM_MEMBERSHIP,
+				membership.getId()
+		);
 	}
 
 	@Test
@@ -391,6 +402,17 @@ class RoomMembershipServiceTest {
 			RoomRepository roomRepository,
 			RoomMembershipRepository membershipRepository
 	) {
-		return new RoomMembershipService(userRepository, roomRepository, membershipRepository, joinCodeHasher);
+		return service(userRepository, roomRepository, membershipRepository, mock(AuditService.class));
+	}
+
+	private RoomMembershipService service(
+			UserRepository userRepository,
+			RoomRepository roomRepository,
+			RoomMembershipRepository membershipRepository,
+			AuditService auditService
+	) {
+		return new RoomMembershipService(
+				userRepository, roomRepository, membershipRepository, joinCodeHasher, auditService
+		);
 	}
 }

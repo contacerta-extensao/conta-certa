@@ -5,11 +5,13 @@ import com.ifsc.contacerta.dto.admin.CreateTeacherRequest;
 import com.ifsc.contacerta.dto.admin.PatchTeacherRequest;
 import com.ifsc.contacerta.dto.shared.PageResponse;
 import com.ifsc.contacerta.model.AccountStatus;
+import com.ifsc.contacerta.security.CurrentUser;
 import com.ifsc.contacerta.service.AdminTeacherService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -46,8 +48,11 @@ public class AdminTeacherController {
 	}
 
 	@PostMapping
-	public ResponseEntity<AdminTeacherResponse> create(@Valid @RequestBody CreateTeacherRequest request) {
-		var teacher = service.create(request);
+	public ResponseEntity<AdminTeacherResponse> create(
+			@AuthenticationPrincipal CurrentUser currentUser,
+			@Valid @RequestBody CreateTeacherRequest request
+	) {
+		var teacher = service.create(currentUser.userId(), request);
 		AdminTeacherResponse response = service.get(teacher.getId());
 		return ResponseEntity.created(URI.create("/admin/teachers/" + response.id())).body(response);
 	}
@@ -58,18 +63,28 @@ public class AdminTeacherController {
 	}
 
 	@PatchMapping("/{teacherId}")
-	public AdminTeacherResponse update(@PathVariable UUID teacherId, @Valid @RequestBody PatchTeacherRequest request) {
-		return service.update(teacherId, request);
+	public AdminTeacherResponse update(
+			@AuthenticationPrincipal CurrentUser currentUser,
+			@PathVariable UUID teacherId,
+			@Valid @RequestBody PatchTeacherRequest request
+	) {
+		return service.update(currentUser.userId(), teacherId, request);
 	}
 
 	@PostMapping("/{teacherId}/activate")
-	public AdminTeacherResponse activate(@PathVariable UUID teacherId) {
-		return service.activate(teacherId);
+	public AdminTeacherResponse activate(
+			@AuthenticationPrincipal CurrentUser currentUser,
+			@PathVariable UUID teacherId
+	) {
+		return service.activate(currentUser.userId(), teacherId);
 	}
 
 	@PostMapping("/{teacherId}/deactivate")
-	public AdminTeacherResponse deactivate(@PathVariable UUID teacherId) {
-		return service.deactivate(teacherId);
+	public AdminTeacherResponse deactivate(
+			@AuthenticationPrincipal CurrentUser currentUser,
+			@PathVariable UUID teacherId
+	) {
+		return service.deactivate(currentUser.userId(), teacherId);
 	}
 
 	@PostMapping("/{teacherId}/password-reset")

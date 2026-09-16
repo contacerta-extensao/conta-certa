@@ -8,6 +8,8 @@ import com.ifsc.contacerta.entity.User;
 import com.ifsc.contacerta.exception.ApiException;
 import com.ifsc.contacerta.mapper.AdminTeacherMapper;
 import com.ifsc.contacerta.model.AccountStatus;
+import com.ifsc.contacerta.model.AuditAction;
+import com.ifsc.contacerta.model.AuditTargetType;
 import com.ifsc.contacerta.model.Role;
 import com.ifsc.contacerta.repository.AdminHistoryQueryRepository;
 import com.ifsc.contacerta.repository.AuthSessionRepository;
@@ -32,6 +34,7 @@ public class AdminTeacherService {
 	private final AuthSessionRepository authSessionRepository;
 	private final AdminHistoryQueryRepository historyRepository;
 	private final AccountLifecycleService accountLifecycleService;
+	private final AuditService auditService;
 	private final Clock clock;
 
 	@Transactional(readOnly = true)
@@ -46,7 +49,7 @@ public class AdminTeacherService {
 	}
 
 	@Transactional
-	public User create(CreateTeacherRequest request) {
+	public User create(UUID actorUserId, CreateTeacherRequest request) {
 		String email = request.email().trim().toLowerCase(java.util.Locale.ROOT);
 		if (userRepository.existsByEmailIgnoreCase(email)) {
 			throw new ApiException(HttpStatus.CONFLICT, "EMAIL_ALREADY_REGISTERED", "Email is already registered.");
@@ -56,11 +59,12 @@ public class AdminTeacherService {
 				request.registrationNumber().trim(), institution);
 		userRepository.save(teacher);
 		accountLifecycleService.inviteTeacher(teacher);
+		auditService.record(actorUserId, AuditAction.TEACHER_CREATED, AuditTargetType.TEACHER, teacher.getId());
 		return teacher;
 	}
 
 	@Transactional
-	public AdminTeacherResponse update(UUID id, PatchTeacherRequest request) {
+	public AdminTeacherResponse update(UUID actorUserId, UUID id, PatchTeacherRequest request) {
 		User teacher = findTeacher(id);
 		checkVersion(teacher, request.version());
 		Institution institution = findActiveInstitution(request.institutionId());
@@ -69,27 +73,30 @@ public class AdminTeacherService {
 			throw new ApiException(HttpStatus.CONFLICT, "TEACHER_INSTITUTION_CHANGE_BLOCKED", "Teacher institution cannot be changed after history exists.");
 		}
 		teacher.updateTeacherProfile(request.fullName().trim(), request.registrationNumber().trim(), institution);
+		auditService.record(actorUserId, AuditAction.TEACHER_UPDATED, AuditTargetType.TEACHER, teacher.getId());
 		return toResponse(teacher);
 	}
 
 	@Transactional
-	public AdminTeacherResponse activate(UUID id) {
+	public AdminTeacherResponse activate(UUID actorUserId, UUID id) {
 		User teacher = findTeacher(id);
 		if (teacher.getStatus() != AccountStatus.INACTIVE) {
 			throw new ApiException(HttpStatus.CONFLICT, "TEACHER_STATUS_TRANSITION_INVALID", "Only an inactive teacher can be activated.");
 		}
 		teacher.activate();
+		auditService.record(actorUserId, AuditAction.TEACHER_ACTIVATED, AuditTargetType.TEACHER, teacher.getId());
 		return toResponse(teacher);
 	}
 
 	@Transactional
-	public AdminTeacherResponse deactivate(UUID id) {
+	public AdminTeacherResponse deactivate(UUID actorUserId, UUID id) {
 		User teacher = findTeacher(id);
 		if (teacher.getStatus() == AccountStatus.INACTIVE) {
 			return toResponse(teacher);
 		}
 		teacher.deactivate();
 		authSessionRepository.revokeAllActiveByUserId(id, clock.instant());
+		auditService.record(actorUserId, AuditAction.TEACHER_DEACTIVATED, AuditTargetType.TEACHER, teacher.getId());
 		return toResponse(teacher);
 	}
 

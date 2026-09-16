@@ -10,6 +10,8 @@ import com.ifsc.contacerta.entity.StoredFile;
 import com.ifsc.contacerta.entity.User;
 import com.ifsc.contacerta.exception.ApiException;
 import com.ifsc.contacerta.model.AccountStatus;
+import com.ifsc.contacerta.model.AuditAction;
+import com.ifsc.contacerta.model.AuditTargetType;
 import com.ifsc.contacerta.model.MaterialKind;
 import com.ifsc.contacerta.model.Role;
 import com.ifsc.contacerta.repository.MaterialRepository;
@@ -35,6 +37,7 @@ public class MaterialService {
 	private final FileStorage fileStorage;
 	private final ExternalUrlValidator urlValidator;
 	private final Clock clock;
+	private final AuditService auditService;
 
 	@Transactional
 	public TeacherMaterialResponse create(UUID teacherId, CreateMaterialRequest request) {
@@ -53,7 +56,9 @@ public class MaterialService {
 					teacher, request.title().trim(), normalize(request.description()), normalize(request.category()), url, now
 			);
 		}
-		return toResponse(materialRepository.save(material));
+		Material saved = materialRepository.save(material);
+		auditService.record(teacherId, AuditAction.MATERIAL_PUBLISHED, AuditTargetType.MATERIAL, saved.getId());
+		return toResponse(saved);
 	}
 
 	@Transactional
@@ -97,7 +102,9 @@ public class MaterialService {
 	@Transactional
 	public void archive(UUID teacherId, UUID materialId) {
 		requireActiveTeacher(teacherId);
-		requireOwnedMaterial(teacherId, materialId).archive();
+		Material material = requireOwnedMaterial(teacherId, materialId);
+		material.archive();
+		auditService.record(teacherId, AuditAction.MATERIAL_ARCHIVED, AuditTargetType.MATERIAL, material.getId());
 	}
 
 	private void validateTarget(CreateMaterialRequest request) {

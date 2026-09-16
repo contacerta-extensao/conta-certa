@@ -11,6 +11,8 @@ import com.ifsc.contacerta.entity.RoomMembership;
 import com.ifsc.contacerta.entity.User;
 import com.ifsc.contacerta.exception.ApiException;
 import com.ifsc.contacerta.model.AccountStatus;
+import com.ifsc.contacerta.model.AuditAction;
+import com.ifsc.contacerta.model.AuditTargetType;
 import com.ifsc.contacerta.model.Grade;
 import com.ifsc.contacerta.model.Role;
 import com.ifsc.contacerta.repository.AttemptRepository;
@@ -32,6 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class ExtraAttemptGrantServiceTest {
@@ -41,6 +44,7 @@ class ExtraAttemptGrantServiceTest {
 	private RoomMembershipRepository membershipRepository;
 	private ExtraAttemptGrantRepository grantRepository;
 	private AttemptRepository attemptRepository;
+	private AuditService auditService;
 	private ExtraAttemptGrantService service;
 	private User teacher;
 	private User student;
@@ -53,6 +57,7 @@ class ExtraAttemptGrantServiceTest {
 		membershipRepository = mock(RoomMembershipRepository.class);
 		grantRepository = mock(ExtraAttemptGrantRepository.class);
 		attemptRepository = mock(AttemptRepository.class);
+		auditService = mock(AuditService.class);
 
 		Institution institution = new Institution(
 				"Instituto Exemplo", "11222333000181", "contato@example.com", "48999990000", true
@@ -83,7 +88,8 @@ class ExtraAttemptGrantServiceTest {
 				membershipRepository,
 				grantRepository,
 				attemptRepository,
-				Clock.fixed(Instant.parse("2026-08-28T12:00:00Z"), ZoneOffset.UTC)
+				Clock.fixed(Instant.parse("2026-08-28T12:00:00Z"), ZoneOffset.UTC),
+				auditService
 		);
 	}
 
@@ -105,6 +111,12 @@ class ExtraAttemptGrantServiceTest {
 		assertThat(response.attemptsUsed()).isEqualTo(4);
 		assertThat(response.attemptsAvailable()).isEqualTo(1);
 		assertThat(response.id()).isNotNull();
+		verify(auditService).record(
+				teacher.getId(),
+				AuditAction.EXTRA_ATTEMPT_GRANTED,
+				AuditTargetType.EXTRA_ATTEMPT_GRANT,
+				response.id()
+		);
 	}
 
 	@Test

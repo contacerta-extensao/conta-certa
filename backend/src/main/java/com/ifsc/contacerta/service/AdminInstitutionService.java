@@ -6,6 +6,8 @@ import com.ifsc.contacerta.dto.institution.CreateInstitutionRequest;
 import com.ifsc.contacerta.entity.Institution;
 import com.ifsc.contacerta.exception.ApiException;
 import com.ifsc.contacerta.mapper.AdminInstitutionMapper;
+import com.ifsc.contacerta.model.AuditAction;
+import com.ifsc.contacerta.model.AuditTargetType;
 import com.ifsc.contacerta.model.Role;
 import com.ifsc.contacerta.repository.AdminHistoryQueryRepository;
 import com.ifsc.contacerta.repository.InstitutionRepository;
@@ -28,6 +30,7 @@ public class AdminInstitutionService {
 	private final InstitutionRepository institutionRepository;
 	private final UserRepository userRepository;
 	private final AdminHistoryQueryRepository historyQueryRepository;
+	private final AuditService auditService;
 
 	@Transactional(readOnly = true)
 	public Page<com.ifsc.contacerta.dto.admin.AdminInstitutionResponse> list(String search, Boolean active, Pageable pageable) {
@@ -41,7 +44,7 @@ public class AdminInstitutionService {
 	}
 
 	@Transactional
-	public AdminInstitutionResponse create(CreateInstitutionRequest request) {
+	public AdminInstitutionResponse create(UUID actorUserId, CreateInstitutionRequest request) {
 		String cnpj = digitsOnly(request.cnpj());
 		validateCnpj(cnpj);
 		String phone = request.contactPhone().trim();
@@ -52,11 +55,13 @@ public class AdminInstitutionService {
 		Institution institution = new Institution(
 				request.name().trim(), cnpj, request.contactEmail().trim().toLowerCase(Locale.ROOT), phone, true
 		);
-		return toResponse(institutionRepository.save(institution));
+		Institution saved = institutionRepository.save(institution);
+		auditService.record(actorUserId, AuditAction.INSTITUTION_CREATED, AuditTargetType.INSTITUTION, saved.getId());
+		return toResponse(saved);
 	}
 
 	@Transactional
-	public AdminInstitutionResponse update(UUID institutionId, PatchInstitutionRequest request) {
+	public AdminInstitutionResponse update(UUID actorUserId, UUID institutionId, PatchInstitutionRequest request) {
 		Institution institution = requireInstitution(institutionId);
 		requireVersion(institution, request.version());
 		String name = request.name() == null ? institution.getName() : request.name().trim();
@@ -70,20 +75,23 @@ public class AdminInstitutionService {
 			throw new ApiException(HttpStatus.CONFLICT, "CNPJ_ALREADY_EXISTS", "CNPJ is already registered.");
 		}
 		institution.update(name, cnpj, email, phone);
+		auditService.record(actorUserId, AuditAction.INSTITUTION_UPDATED, AuditTargetType.INSTITUTION, institution.getId());
 		return toResponse(institution);
 	}
 
 	@Transactional
-	public AdminInstitutionResponse activate(UUID institutionId) {
+	public AdminInstitutionResponse activate(UUID actorUserId, UUID institutionId) {
 		Institution institution = requireInstitution(institutionId);
 		institution.activate();
+		auditService.record(actorUserId, AuditAction.INSTITUTION_ACTIVATED, AuditTargetType.INSTITUTION, institution.getId());
 		return toResponse(institution);
 	}
 
 	@Transactional
-	public AdminInstitutionResponse deactivate(UUID institutionId) {
+	public AdminInstitutionResponse deactivate(UUID actorUserId, UUID institutionId) {
 		Institution institution = requireInstitution(institutionId);
 		institution.deactivate();
+		auditService.record(actorUserId, AuditAction.INSTITUTION_DEACTIVATED, AuditTargetType.INSTITUTION, institution.getId());
 		return toResponse(institution);
 	}
 

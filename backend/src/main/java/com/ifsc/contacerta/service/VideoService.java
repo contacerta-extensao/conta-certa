@@ -8,6 +8,8 @@ import com.ifsc.contacerta.entity.User;
 import com.ifsc.contacerta.entity.Video;
 import com.ifsc.contacerta.exception.ApiException;
 import com.ifsc.contacerta.model.AccountStatus;
+import com.ifsc.contacerta.model.AuditAction;
+import com.ifsc.contacerta.model.AuditTargetType;
 import com.ifsc.contacerta.model.Role;
 import com.ifsc.contacerta.repository.UserRepository;
 import com.ifsc.contacerta.repository.VideoRepository;
@@ -30,6 +32,7 @@ public class VideoService {
 	private final VideoRepository videoRepository;
 	private final ExternalUrlValidator urlValidator;
 	private final Clock clock;
+	private final AuditService auditService;
 
 	@Transactional
 	public TeacherVideoResponse create(UUID teacherId, CreateVideoRequest request) {
@@ -43,6 +46,7 @@ public class VideoService {
 				url,
 				Instant.now(clock)
 		));
+		auditService.record(teacherId, AuditAction.VIDEO_PUBLISHED, AuditTargetType.VIDEO, video.getId());
 		return toResponse(video);
 	}
 
@@ -84,7 +88,9 @@ public class VideoService {
 	@Transactional
 	public void archive(UUID teacherId, UUID videoId) {
 		requireActiveTeacher(teacherId);
-		requireOwnedVideo(teacherId, videoId).archive();
+		Video video = requireOwnedVideo(teacherId, videoId);
+		video.archive();
+		auditService.record(teacherId, AuditAction.VIDEO_ARCHIVED, AuditTargetType.VIDEO, video.getId());
 	}
 
 	private User requireActiveTeacher(UUID teacherId) {
