@@ -4,6 +4,8 @@ import com.ifsc.contacerta.dto.admin.PatchInstitutionRequest;
 import com.ifsc.contacerta.dto.institution.CreateInstitutionRequest;
 import com.ifsc.contacerta.entity.Institution;
 import com.ifsc.contacerta.exception.ApiException;
+import com.ifsc.contacerta.model.AuditAction;
+import com.ifsc.contacerta.model.AuditTargetType;
 import com.ifsc.contacerta.repository.AdminHistoryQueryRepository;
 import com.ifsc.contacerta.repository.InstitutionRepository;
 import com.ifsc.contacerta.repository.UserRepository;
@@ -14,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -28,6 +31,7 @@ class AdminInstitutionServiceTest {
 	@Mock private InstitutionRepository institutionRepository;
 	@Mock private UserRepository userRepository;
 	@Mock private AdminHistoryQueryRepository historyQueryRepository;
+	@Mock private AuditService auditService;
 	@InjectMocks private AdminInstitutionService service;
 
 	@Test
@@ -35,7 +39,8 @@ class AdminInstitutionServiceTest {
 		when(institutionRepository.findByCnpj("12345678000195")).thenReturn(Optional.empty());
 		when(institutionRepository.save(any(Institution.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-		var response = service.create(new CreateInstitutionRequest(
+		UUID actorId = UUID.randomUUID();
+		var response = service.create(actorId, new CreateInstitutionRequest(
 				"  Instituto Alfa ", "12.345.678/0001-95", " CONTATO@EXAMPLE.COM ", "+5548999999999"
 		));
 
@@ -43,6 +48,7 @@ class AdminInstitutionServiceTest {
 		assertThat(response.cnpj()).isEqualTo("12345678000195");
 		assertThat(response.contactEmail()).isEqualTo("contato@example.com");
 		assertThat(response.contactPhone()).isEqualTo("+5548999999999");
+		verify(auditService).record(actorId, AuditAction.INSTITUTION_CREATED, AuditTargetType.INSTITUTION, response.id());
 	}
 
 	@Test
@@ -51,7 +57,7 @@ class AdminInstitutionServiceTest {
 				"Instituto Alfa", "12345678000195", "contato@example.com", "+5548999999999", true
 		);
 		when(institutionRepository.findById(institution.getId())).thenReturn(Optional.of(institution));
-		assertThatThrownBy(() -> service.update(institution.getId(), new PatchInstitutionRequest(
+		assertThatThrownBy(() -> service.update(UUID.randomUUID(), institution.getId(), new PatchInstitutionRequest(
 				"Novo nome", null, null, null, 1L
 		))).isInstanceOfSatisfying(ApiException.class,
 				error -> assertThat(error.getCode()).isEqualTo("VERSION_CONFLICT"));

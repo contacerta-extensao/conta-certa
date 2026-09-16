@@ -2,13 +2,20 @@ package com.ifsc.contacerta.controller;
 
 import com.ifsc.contacerta.dto.admin.AdminInstitutionResponse;
 import com.ifsc.contacerta.dto.institution.CreateInstitutionRequest;
+import com.ifsc.contacerta.model.Role;
+import com.ifsc.contacerta.security.CurrentUser;
 import com.ifsc.contacerta.service.AdminInstitutionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.MethodParameter;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.bind.support.WebDataBinderFactory;
+import org.springframework.web.context.request.NativeWebRequest;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.web.method.support.ModelAndViewContainer;
 
 import java.util.List;
 import java.util.UUID;
@@ -28,17 +35,21 @@ class AdminInstitutionControllerTest {
 
 	private AdminInstitutionService service;
 	private MockMvc mockMvc;
+	private UUID adminId;
 
 	@BeforeEach
 	void setUp() {
 		service = mock(AdminInstitutionService.class);
-		mockMvc = MockMvcBuilders.standaloneSetup(new AdminInstitutionController(service)).build();
+		adminId = UUID.randomUUID();
+		mockMvc = MockMvcBuilders.standaloneSetup(new AdminInstitutionController(service))
+				.setCustomArgumentResolvers(currentUserResolver())
+				.build();
 	}
 
 	@Test
 	void criaInstituicaoComLocation() throws Exception {
 		UUID id = UUID.randomUUID();
-		when(service.create(any(CreateInstitutionRequest.class))).thenReturn(response(id));
+		when(service.create(eq(adminId), any(CreateInstitutionRequest.class))).thenReturn(response(id));
 
 		mockMvc.perform(post("/admin/institutions")
 				.contentType("application/json")
@@ -46,6 +57,25 @@ class AdminInstitutionControllerTest {
 				.andExpect(status().isCreated())
 				.andExpect(header().string("Location", "/admin/institutions/" + id))
 				.andExpect(jsonPath("$.cnpj").value("12345678000195"));
+	}
+
+	private HandlerMethodArgumentResolver currentUserResolver() {
+		return new HandlerMethodArgumentResolver() {
+			@Override
+			public boolean supportsParameter(MethodParameter parameter) {
+				return parameter.getParameterType() == CurrentUser.class;
+			}
+
+			@Override
+			public Object resolveArgument(
+					MethodParameter parameter,
+					ModelAndViewContainer mavContainer,
+					NativeWebRequest webRequest,
+					WebDataBinderFactory binderFactory
+			) {
+				return new CurrentUser(adminId, Role.ADMIN, UUID.randomUUID());
+			}
+		};
 	}
 
 	@Test

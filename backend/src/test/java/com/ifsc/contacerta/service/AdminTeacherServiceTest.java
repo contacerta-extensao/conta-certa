@@ -6,6 +6,8 @@ import com.ifsc.contacerta.entity.Institution;
 import com.ifsc.contacerta.entity.User;
 import com.ifsc.contacerta.exception.ApiException;
 import com.ifsc.contacerta.model.AccountStatus;
+import com.ifsc.contacerta.model.AuditAction;
+import com.ifsc.contacerta.model.AuditTargetType;
 import com.ifsc.contacerta.model.Role;
 import com.ifsc.contacerta.repository.AdminHistoryQueryRepository;
 import com.ifsc.contacerta.repository.AuthSessionRepository;
@@ -19,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
 import java.time.Clock;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -36,6 +39,7 @@ class AdminTeacherServiceTest {
 	@Mock AuthSessionRepository authSessionRepository;
 	@Mock AdminHistoryQueryRepository historyRepository;
 	@Mock AccountLifecycleService accountLifecycleService;
+	@Mock AuditService auditService;
 	@Mock Clock clock;
 	@InjectMocks AdminTeacherService service;
 
@@ -46,19 +50,21 @@ class AdminTeacherServiceTest {
 		when(userRepository.existsByEmailIgnoreCase("ana@example.com")).thenReturn(false);
 		when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-		User created = service.create(new CreateTeacherRequest(" Ana Souza ", "ANA@EXAMPLE.COM", " MAT-1 ", institution.getId()));
+		UUID actorId = UUID.randomUUID();
+		User created = service.create(actorId, new CreateTeacherRequest(" Ana Souza ", "ANA@EXAMPLE.COM", " MAT-1 ", institution.getId()));
 
 		assertThat(created.getRole()).isEqualTo(Role.TEACHER);
 		assertThat(created.getStatus()).isEqualTo(AccountStatus.PENDING);
 		assertThat(created.getEmail()).isEqualTo("ana@example.com");
 		verify(accountLifecycleService).inviteTeacher(created);
+		verify(auditService).record(actorId, AuditAction.TEACHER_CREATED, AuditTargetType.TEACHER, created.getId());
 	}
 
 	@Test
 	void rejeitaVersaoObsoletaAoEditar() {
 		User teacher = new User(Role.TEACHER, AccountStatus.ACTIVE, "Ana", "ana@example.com", "MAT-1", null);
 		when(userRepository.findByIdAndRole(any(), eq(Role.TEACHER))).thenReturn(Optional.of(teacher));
-		assertThatThrownBy(() -> service.update(teacher.getId(), new PatchTeacherRequest("Ana", "MAT-2", null, 99L)))
+		assertThatThrownBy(() -> service.update(UUID.randomUUID(), teacher.getId(), new PatchTeacherRequest("Ana", "MAT-2", null, 99L)))
 				.isInstanceOf(ApiException.class)
 				.hasFieldOrPropertyWithValue("code", "VERSION_CONFLICT");
 		verify(userRepository, never()).save(any());
@@ -73,7 +79,7 @@ class AdminTeacherServiceTest {
 		when(institutionRepository.findById(second.getId())).thenReturn(Optional.of(second));
 		when(historyRepository.hasTeacherHistory(teacher.getId())).thenReturn(true);
 
-		assertThatThrownBy(() -> service.update(teacher.getId(), new PatchTeacherRequest("Ana", "MAT-2", second.getId(), 0L)))
+		assertThatThrownBy(() -> service.update(UUID.randomUUID(), teacher.getId(), new PatchTeacherRequest("Ana", "MAT-2", second.getId(), 0L)))
 				.isInstanceOf(ApiException.class)
 				.hasFieldOrPropertyWithValue("code", "TEACHER_INSTITUTION_CHANGE_BLOCKED");
 	}
@@ -84,9 +90,11 @@ class AdminTeacherServiceTest {
 		when(userRepository.findByIdAndRole(teacher.getId(), Role.TEACHER)).thenReturn(Optional.of(teacher));
 		when(authSessionRepository.findLastUsedAtByUserId(teacher.getId())).thenReturn(Optional.empty());
 
-		service.activate(teacher.getId());
+		UUID actorId = UUID.randomUUID();
+		service.activate(actorId, teacher.getId());
 
 		assertThat(teacher.getStatus()).isEqualTo(AccountStatus.ACTIVE);
+		verify(auditService).record(actorId, AuditAction.TEACHER_ACTIVATED, AuditTargetType.TEACHER, teacher.getId());
 	}
 
 	@Test
@@ -96,10 +104,12 @@ class AdminTeacherServiceTest {
 		when(authSessionRepository.findLastUsedAtByUserId(teacher.getId())).thenReturn(Optional.empty());
 		when(clock.instant()).thenReturn(java.time.Instant.parse("2026-09-03T12:00:00Z"));
 
-		service.deactivate(teacher.getId());
+		UUID actorId = UUID.randomUUID();
+		service.deactivate(actorId, teacher.getId());
 
 		assertThat(teacher.getStatus()).isEqualTo(AccountStatus.INACTIVE);
 		verify(authSessionRepository).revokeAllActiveByUserId(teacher.getId(), java.time.Instant.parse("2026-09-03T12:00:00Z"));
+		verify(auditService).record(actorId, AuditAction.TEACHER_DEACTIVATED, AuditTargetType.TEACHER, teacher.getId());
 	}
 
 	@Test

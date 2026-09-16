@@ -4,10 +4,12 @@ import com.ifsc.contacerta.dto.admin.AdminInstitutionResponse;
 import com.ifsc.contacerta.dto.admin.PatchInstitutionRequest;
 import com.ifsc.contacerta.dto.institution.CreateInstitutionRequest;
 import com.ifsc.contacerta.dto.shared.PageResponse;
+import com.ifsc.contacerta.security.CurrentUser;
 import com.ifsc.contacerta.service.AdminInstitutionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -44,8 +46,11 @@ public class AdminInstitutionController {
 	}
 
 	@PostMapping
-	public ResponseEntity<AdminInstitutionResponse> create(@Valid @RequestBody CreateInstitutionRequest request) {
-		AdminInstitutionResponse response = service.create(request);
+	public ResponseEntity<AdminInstitutionResponse> create(
+			@AuthenticationPrincipal CurrentUser currentUser,
+			@Valid @RequestBody CreateInstitutionRequest request
+	) {
+		AdminInstitutionResponse response = service.create(currentUser.userId(), request);
 		return ResponseEntity.created(URI.create("/admin/institutions/" + response.id())).body(response);
 	}
 
@@ -56,20 +61,27 @@ public class AdminInstitutionController {
 
 	@PatchMapping("/{institutionId}")
 	public AdminInstitutionResponse update(
+			@AuthenticationPrincipal CurrentUser currentUser,
 			@PathVariable UUID institutionId,
 			@Valid @RequestBody PatchInstitutionRequest request
 	) {
-		return service.update(institutionId, request);
+		return service.update(currentUser.userId(), institutionId, request);
 	}
 
 	@PostMapping("/{institutionId}/activate")
-	public AdminInstitutionResponse activate(@PathVariable UUID institutionId) {
-		return service.activate(institutionId);
+	public AdminInstitutionResponse activate(
+			@AuthenticationPrincipal CurrentUser currentUser,
+			@PathVariable UUID institutionId
+	) {
+		return service.activate(currentUser.userId(), institutionId);
 	}
 
 	@PostMapping("/{institutionId}/deactivate")
-	public AdminInstitutionResponse deactivate(@PathVariable UUID institutionId) {
-		return service.deactivate(institutionId);
+	public AdminInstitutionResponse deactivate(
+			@AuthenticationPrincipal CurrentUser currentUser,
+			@PathVariable UUID institutionId
+	) {
+		return service.deactivate(currentUser.userId(), institutionId);
 	}
 
 	@DeleteMapping("/{institutionId}")
