@@ -1,0 +1,14 @@
+package com.ifsc.contacerta.model;
+
+public enum AuditTargetType {
+	TEACHER,
+	INSTITUTION,
+	ROOM,
+	ROOM_MEMBERSHIP,
+	EXTRA_ATTEMPT_GRANT,
+	LESSON,
+	LESSON_ASSIGNMENT,
+	VIDEO,
+	MATERIAL,
+	QUESTION
+}
