@@ -7,6 +7,8 @@ import com.ifsc.contacerta.entity.User;
 import com.ifsc.contacerta.entity.Video;
 import com.ifsc.contacerta.exception.ApiException;
 import com.ifsc.contacerta.model.AccountStatus;
+import com.ifsc.contacerta.model.AuditAction;
+import com.ifsc.contacerta.model.AuditTargetType;
 import com.ifsc.contacerta.model.ContentStatus;
 import com.ifsc.contacerta.model.Role;
 import com.ifsc.contacerta.repository.UserRepository;
@@ -34,17 +36,20 @@ class VideoServiceTest {
 	private UserRepository userRepository;
 	private VideoRepository videoRepository;
 	private VideoService service;
+	private AuditService auditService;
 	private User teacher;
 
 	@BeforeEach
 	void setUp() {
 		userRepository = mock(UserRepository.class);
 		videoRepository = mock(VideoRepository.class);
+		auditService = mock(AuditService.class);
 		service = new VideoService(
 				userRepository,
 				videoRepository,
 				new ExternalUrlValidator(),
-				Clock.fixed(NOW, ZoneOffset.UTC)
+				Clock.fixed(NOW, ZoneOffset.UTC),
+				auditService
 		);
 		teacher = new User(Role.TEACHER, AccountStatus.ACTIVE, "Professora", "prof@example.com", "P-1", null);
 		when(userRepository.findById(teacher.getId())).thenReturn(Optional.of(teacher));
@@ -62,6 +67,9 @@ class VideoServiceTest {
 		assertThat(created.status()).isEqualTo(ContentStatus.PUBLISHED);
 		assertThat(created.createdAt()).isEqualTo(NOW);
 		verify(videoRepository).save(any(Video.class));
+		verify(auditService).record(
+				teacher.getId(), AuditAction.VIDEO_PUBLISHED, AuditTargetType.VIDEO, created.id()
+		);
 	}
 
 	@Test

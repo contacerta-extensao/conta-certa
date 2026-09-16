@@ -6,6 +6,8 @@ import com.ifsc.contacerta.entity.Institution;
 import com.ifsc.contacerta.entity.Lesson;
 import com.ifsc.contacerta.entity.User;
 import com.ifsc.contacerta.model.AccountStatus;
+import com.ifsc.contacerta.model.AuditAction;
+import com.ifsc.contacerta.model.AuditTargetType;
 import com.ifsc.contacerta.model.ContentStatus;
 import com.ifsc.contacerta.model.Role;
 import com.ifsc.contacerta.repository.LessonAssignmentRepository;
@@ -32,6 +34,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -41,6 +44,7 @@ class LessonServiceTest {
 	private LessonRepository lessonRepository;
 	private QuestionRepository questionRepository;
 	private LessonAssignmentRepository assignmentRepository;
+	private AuditService auditService;
 	private LessonService service;
 	private User teacher;
 
@@ -50,7 +54,8 @@ class LessonServiceTest {
 		lessonRepository = mock(LessonRepository.class);
 		questionRepository = mock(QuestionRepository.class);
 		assignmentRepository = mock(LessonAssignmentRepository.class);
-		service = new LessonService(userRepository, lessonRepository, questionRepository, assignmentRepository);
+		auditService = mock(AuditService.class);
+		service = new LessonService(userRepository, lessonRepository, questionRepository, assignmentRepository, auditService);
 		Institution institution = new Institution(
 				"Instituto Exemplo", "11222333000181", "contato@example.com", "48999990000", true
 		);
@@ -134,6 +139,19 @@ class LessonServiceTest {
 					assertThat(exception.getStatus().value()).isEqualTo(422);
 					assertThat(exception.getCode()).isEqualTo("LESSON_HAS_NO_ACTIVE_QUESTIONS");
 				});
+	}
+
+	@Test
+	void deveAuditarPublicacaoDeLicao() {
+		Lesson lesson = new Lesson("Juros compostos", "Conceitos", "# Teoria", teacher);
+		when(lessonRepository.findByIdAndTeacherId(lesson.getId(), teacher.getId())).thenReturn(Optional.of(lesson));
+		when(questionRepository.countByLessonIdAndActiveTrue(lesson.getId())).thenReturn(1L);
+
+		service.publish(teacher.getId(), lesson.getId());
+
+		verify(auditService).record(
+				teacher.getId(), AuditAction.LESSON_PUBLISHED, AuditTargetType.LESSON, lesson.getId()
+		);
 	}
 
 	private LessonCountProjection count(UUID lessonId, long total) {

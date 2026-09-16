@@ -11,6 +11,8 @@ import com.ifsc.contacerta.entity.User;
 import com.ifsc.contacerta.exception.ApiException;
 import com.ifsc.contacerta.mapper.RoomMapper;
 import com.ifsc.contacerta.model.AccountStatus;
+import com.ifsc.contacerta.model.AuditAction;
+import com.ifsc.contacerta.model.AuditTargetType;
 import com.ifsc.contacerta.model.Grade;
 import com.ifsc.contacerta.model.MembershipStatus;
 import com.ifsc.contacerta.model.Role;
@@ -41,6 +43,7 @@ public class RoomService {
 	private final RoomMembershipRepository membershipRepository;
 	private final JoinCodeGenerator joinCodeGenerator;
 	private final JoinCodeHasher joinCodeHasher;
+	private final AuditService auditService;
 
 	@Transactional
 	public TeacherRoomDetailResponse create(UUID teacherId, CreateRoomRequest request) {
@@ -132,6 +135,7 @@ public class RoomService {
 		}
 		requireCurrentVersion(room, version);
 		room.archive();
+		auditService.record(teacherId, AuditAction.ROOM_ARCHIVED, AuditTargetType.ROOM, room.getId());
 		return toTeacherDetailResponse(room);
 	}
 
@@ -159,6 +163,7 @@ public class RoomService {
 		requireCurrentVersion(room, version);
 		String joinCode = joinCodeGenerator.generateUnique();
 		room.changeJoinCode(joinCode, joinCodeHasher.hash(joinCode));
+		auditService.record(teacherId, AuditAction.ROOM_CODE_REGENERATED, AuditTargetType.ROOM, room.getId());
 		return toTeacherDetailResponse(room);
 	}
 

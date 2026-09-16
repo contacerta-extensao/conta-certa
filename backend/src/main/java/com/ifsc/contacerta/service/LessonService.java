@@ -10,6 +10,8 @@ import com.ifsc.contacerta.entity.Question;
 import com.ifsc.contacerta.entity.User;
 import com.ifsc.contacerta.exception.ApiException;
 import com.ifsc.contacerta.model.AccountStatus;
+import com.ifsc.contacerta.model.AuditAction;
+import com.ifsc.contacerta.model.AuditTargetType;
 import com.ifsc.contacerta.model.ContentStatus;
 import com.ifsc.contacerta.model.Role;
 import com.ifsc.contacerta.repository.LessonAssignmentRepository;
@@ -38,6 +40,7 @@ public class LessonService {
 	private final LessonRepository lessonRepository;
 	private final QuestionRepository questionRepository;
 	private final LessonAssignmentRepository assignmentRepository;
+	private final AuditService auditService;
 
 	@Transactional
 	public LessonDetailResponse create(UUID teacherId, CreateLessonRequest request) {
@@ -62,6 +65,7 @@ public class LessonService {
 			);
 		}
 		lesson.publish();
+		auditService.record(teacherId, AuditAction.LESSON_PUBLISHED, AuditTargetType.LESSON, lesson.getId());
 		return toDetailResponse(lesson);
 	}
 
@@ -114,6 +118,7 @@ public class LessonService {
 		requireActiveTeacher(teacherId);
 		Lesson lesson = requireOwnedLesson(teacherId, lessonId);
 		lesson.archive();
+		auditService.record(teacherId, AuditAction.LESSON_ARCHIVED, AuditTargetType.LESSON, lesson.getId());
 		return toDetailResponse(lesson);
 	}
 

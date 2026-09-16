@@ -10,6 +10,8 @@ import com.ifsc.contacerta.entity.Question;
 import com.ifsc.contacerta.entity.User;
 import com.ifsc.contacerta.exception.ApiException;
 import com.ifsc.contacerta.model.AccountStatus;
+import com.ifsc.contacerta.model.AuditAction;
+import com.ifsc.contacerta.model.AuditTargetType;
 import com.ifsc.contacerta.model.NumericUnit;
 import com.ifsc.contacerta.model.QuestionType;
 import com.ifsc.contacerta.model.Role;
@@ -25,9 +27,42 @@ import java.math.BigDecimal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class QuestionServiceTest {
+
+	@Test
+	void deveAuditarArquivamentoDeQuestaoEmUso() {
+		LessonRepository lessonRepository = mock(LessonRepository.class);
+		QuestionRepository questionRepository = mock(QuestionRepository.class);
+		LessonAssignmentRepository lessonAssignmentRepository = mock(LessonAssignmentRepository.class);
+		AuditService auditService = mock(AuditService.class);
+		Institution institution = new Institution(
+				"Instituto Exemplo", "11222333000181", "contato@example.com", "48999990000", true
+		);
+		User teacher = new User(
+				Role.TEACHER, AccountStatus.ACTIVE, "Professora Ana", "ana@example.com", "PROF-1", institution
+		);
+		Lesson lesson = new Lesson("Juros", "Conceitos", "# Teoria", teacher);
+		Question question = Question.create(lesson, QuestionType.TRUE_FALSE, "Correto?", null, List.of(), 1);
+		question.configureBoolean(true);
+		when(questionRepository.findByIdAndLessonTeacherId(question.getId(), teacher.getId()))
+				.thenReturn(Optional.of(question));
+		when(lessonRepository.findByIdAndTeacherIdForUpdate(lesson.getId(), teacher.getId()))
+				.thenReturn(Optional.of(lesson));
+		when(lessonAssignmentRepository.existsByLessonId(lesson.getId())).thenReturn(true);
+		QuestionService service = new QuestionService(
+				lessonRepository, questionRepository, lessonAssignmentRepository, auditService
+		);
+
+		service.delete(teacher.getId(), question.getId());
+
+		assertThat(question.isActive()).isFalse();
+		verify(auditService).record(
+				teacher.getId(), AuditAction.QUESTION_ARCHIVED, AuditTargetType.QUESTION, question.getId()
+		);
+	}
 
 	@Test
 	void deveRejeitarEscolhaUnicaSemExatamenteUmaOpcaoCorreta() {
@@ -38,7 +73,9 @@ class QuestionServiceTest {
 		User teacher = new User(Role.TEACHER, AccountStatus.ACTIVE, "Professora Ana", "ana@example.com", "PROF-1", institution);
 		Lesson lesson = new Lesson("Juros", "Conceitos", "# Teoria", teacher);
 		when(lessonRepository.findByIdAndTeacherIdForUpdate(lesson.getId(), teacher.getId())).thenReturn(Optional.of(lesson));
-		QuestionService service = new QuestionService(lessonRepository, questionRepository, lessonAssignmentRepository);
+		QuestionService service = new QuestionService(
+				lessonRepository, questionRepository, lessonAssignmentRepository, mock(AuditService.class)
+		);
 
 		assertThatThrownBy(() -> service.create(teacher.getId(), lesson.getId(), new CreateQuestionRequest(
 				"Qual taxa?", QuestionType.SINGLE_CHOICE, null,
@@ -64,7 +101,9 @@ class QuestionServiceTest {
 				.thenReturn(Optional.of(question));
 		when(lessonRepository.findByIdAndTeacherIdForUpdate(lesson.getId(), teacher.getId()))
 				.thenReturn(Optional.of(lesson));
-		QuestionService service = new QuestionService(lessonRepository, questionRepository, lessonAssignmentRepository);
+		QuestionService service = new QuestionService(
+				lessonRepository, questionRepository, lessonAssignmentRepository, mock(AuditService.class)
+		);
 
 		QuestionResponse response = service.update(teacher.getId(), question.getId(), new UpdateQuestionRequest(
 				null, QuestionType.TRUE_FALSE, null, null, true, null, null, null, null, question.getVersion()

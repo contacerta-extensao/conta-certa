@@ -9,6 +9,8 @@ import com.ifsc.contacerta.entity.User;
 import com.ifsc.contacerta.exception.ApiException;
 import com.ifsc.contacerta.mapper.RoomMembershipMapper;
 import com.ifsc.contacerta.model.AccountStatus;
+import com.ifsc.contacerta.model.AuditAction;
+import com.ifsc.contacerta.model.AuditTargetType;
 import com.ifsc.contacerta.model.MembershipStatus;
 import com.ifsc.contacerta.model.Role;
 import com.ifsc.contacerta.repository.RoomMembershipRepository;
@@ -31,6 +33,7 @@ public class RoomMembershipService {
 	private final RoomRepository roomRepository;
 	private final RoomMembershipRepository membershipRepository;
 	private final JoinCodeHasher joinCodeHasher;
+	private final AuditService auditService;
 
 	@Transactional
 	public StudentRoomResponse join(UUID studentId, String joinCode) {
@@ -109,6 +112,12 @@ public class RoomMembershipService {
 						"Membership was not found."
 				));
 		membership.remove(teacher);
+		auditService.record(
+				teacherId,
+				AuditAction.ROOM_STUDENT_REMOVED,
+				AuditTargetType.ROOM_MEMBERSHIP,
+				membership.getId()
+		);
 	}
 
 	private Room requireOwnedRoom(UUID teacherId, UUID roomId) {

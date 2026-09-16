@@ -12,6 +12,8 @@ import com.ifsc.contacerta.entity.Room;
 import com.ifsc.contacerta.entity.User;
 import com.ifsc.contacerta.exception.ApiException;
 import com.ifsc.contacerta.model.AccountStatus;
+import com.ifsc.contacerta.model.AuditAction;
+import com.ifsc.contacerta.model.AuditTargetType;
 import com.ifsc.contacerta.model.ContentStatus;
 import com.ifsc.contacerta.model.Grade;
 import com.ifsc.contacerta.model.Role;
@@ -41,6 +43,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.groups.Tuple.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class LessonAssignmentServiceTest {
@@ -50,6 +53,7 @@ class LessonAssignmentServiceTest {
 	private LessonRepository lessonRepository;
 	private LessonAssignmentRepository assignmentRepository;
 	private QuestionRepository questionRepository;
+	private AuditService auditService;
 	private LessonAssignmentService service;
 	private User teacher;
 	private Room room;
@@ -62,6 +66,7 @@ class LessonAssignmentServiceTest {
 		lessonRepository = mock(LessonRepository.class);
 		assignmentRepository = mock(LessonAssignmentRepository.class);
 		questionRepository = mock(QuestionRepository.class);
+		auditService = mock(AuditService.class);
 		Institution institution = new Institution(
 				"Instituto Exemplo", "11222333000181", "contato@example.com", "48999990000", true
 		);
@@ -88,7 +93,8 @@ class LessonAssignmentServiceTest {
 				lessonRepository,
 				assignmentRepository,
 				questionRepository,
-				Clock.fixed(Instant.parse("2026-08-27T12:00:00Z"), ZoneOffset.UTC)
+				Clock.fixed(Instant.parse("2026-08-27T12:00:00Z"), ZoneOffset.UTC),
+				auditService
 		);
 	}
 
@@ -326,6 +332,25 @@ class LessonAssignmentServiceTest {
 				HttpStatus.UNPROCESSABLE_CONTENT,
 				"INSUFFICIENT_ACTIVE_QUESTIONS",
 				() -> service.update(teacher.getId(), room.getId(), assignment.getId(), request)
+		);
+	}
+
+	@Test
+	void deveAuditarPublicacaoDaAtribuicao() {
+		lesson.publish();
+		LessonAssignment assignment = assignment(lesson, 1);
+		stubOwnedAssignment(assignment);
+		UpdateLessonAssignmentRequest request = new UpdateLessonAssignmentRequest(
+				ContentStatus.PUBLISHED, null, null, null, null, null, null, null, assignment.getVersion()
+		);
+
+		service.update(teacher.getId(), room.getId(), assignment.getId(), request);
+
+		verify(auditService).record(
+				teacher.getId(),
+				AuditAction.LESSON_ASSIGNMENT_PUBLISHED,
+				AuditTargetType.LESSON_ASSIGNMENT,
+				assignment.getId()
 		);
 	}
 

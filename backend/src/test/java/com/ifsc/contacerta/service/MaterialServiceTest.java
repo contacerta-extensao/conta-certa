@@ -8,6 +8,8 @@ import com.ifsc.contacerta.entity.StoredFile;
 import com.ifsc.contacerta.entity.User;
 import com.ifsc.contacerta.exception.ApiException;
 import com.ifsc.contacerta.model.AccountStatus;
+import com.ifsc.contacerta.model.AuditAction;
+import com.ifsc.contacerta.model.AuditTargetType;
 import com.ifsc.contacerta.model.MaterialKind;
 import com.ifsc.contacerta.model.Role;
 import com.ifsc.contacerta.repository.MaterialRepository;
@@ -28,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class MaterialServiceTest {
@@ -37,6 +40,7 @@ class MaterialServiceTest {
 	private MaterialService service;
 	private FileStorage storage;
 	private MaterialRepository materials;
+	private AuditService auditService;
 	private User teacher;
 	private User anotherTeacher;
 
@@ -45,8 +49,9 @@ class MaterialServiceTest {
 		UserRepository users = mock(UserRepository.class);
 		materials = mock(MaterialRepository.class);
 		storage = mock(FileStorage.class);
+		auditService = mock(AuditService.class);
 		service = new MaterialService(
-				users, materials, storage, new ExternalUrlValidator(), Clock.fixed(NOW, ZoneOffset.UTC)
+				users, materials, storage, new ExternalUrlValidator(), Clock.fixed(NOW, ZoneOffset.UTC), auditService
 		);
 		teacher = new User(Role.TEACHER, AccountStatus.ACTIVE, "Professora", "prof@example.com", "P-1", null);
 		anotherTeacher = new User(Role.TEACHER, AccountStatus.ACTIVE, "Outro", "outro@example.com", "P-2", null);
@@ -77,6 +82,9 @@ class MaterialServiceTest {
 		assertThat(created.kind()).isEqualTo(MaterialKind.EXTERNAL_LINK);
 		assertThat(created.url()).isEqualTo("https://example.com/material");
 		assertThat(created.file()).isNull();
+		verify(auditService).record(
+				teacher.getId(), AuditAction.MATERIAL_PUBLISHED, AuditTargetType.MATERIAL, created.id()
+		);
 	}
 
 	@Test
