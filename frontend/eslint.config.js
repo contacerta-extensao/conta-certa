@@ -66,7 +66,7 @@ module.exports = defineConfig([
   // O HttpClient é encapsulado pelo ApiClient — nenhuma feature o injeta.
   {
     files: ['src/app/**/*.ts'],
-    ignores: ['src/app/core/api/**', 'src/app/core/interceptors/**', 'src/mocks/**'],
+    ignores: ['src/app/core/api/**', 'src/app/core/interceptors/**'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -90,7 +90,6 @@ module.exports = defineConfig([
     ignores: [
       'src/app/core/auth/**',
       'src/app/shared/layout/theme.service.ts',
-      'src/mocks/**',
       '**/*.spec.ts',
     ],
     rules: {

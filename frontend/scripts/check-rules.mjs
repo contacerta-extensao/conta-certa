@@ -32,7 +32,6 @@ const SRC = join(ROOT, 'src');
 
 const isTs = (path) => path.endsWith('.ts') && !path.endsWith('.spec.ts');
 const isTemplate = (path) => path.endsWith('.html');
-const inMocks = (path) => path.includes(`${sep}mocks${sep}`);
 
 /** @type {Rule[]} */
 const RULES = [
@@ -43,8 +42,6 @@ const RULES = [
     pattern:
       /Math\.(round|ceil|floor|trunc)\s*\([^)]{0,60}\b(stars?|xp|score|scorePercent|level|passed|correctAnswers)\b|(\b(stars?|xp|score|scorePercent|level)\b[^;\n]{0,40})Math\.(round|ceil|floor)/i,
     files: isTs,
-    // O mock é o "servidor": é justamente ele quem aplica as regras.
-    exempt: (path) => inMocks(path),
     hint: 'Estes valores vêm da API. Ver §11 da spec de integração e visão geral §3.1.',
   },
   {
@@ -53,7 +50,6 @@ const RULES = [
     pattern: /Date\.now\(\)/,
     files: (path) =>
       isTs(path) && /attempt|tentativa|countdown/i.test(path) && !path.includes('server-clock'),
-    exempt: (path) => inMocks(path),
     hint: 'Use ServerClock.remainingMs(expiresAt). Ver Parte 1, §7.',
   },
   {
@@ -76,7 +72,7 @@ const RULES = [
     pattern:
       /(parseFloat|Number)\s*\(\s*[^)]*\b(price|amount|value|numericValue|correctNumericValue|monetary)\b/i,
     files: isTs,
-    exempt: (path) => inMocks(path) || path.includes(`util${sep}format`),
+    exempt: (path) => path.includes(`util${sep}format`),
     hint: 'Valores monetários e respostas numéricas trafegam como string. Ver §2.1 da spec.',
   },
   {
