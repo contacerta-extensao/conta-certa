@@ -1,16 +1,8 @@
 import { registerLocaleData } from '@angular/common';
 import localePt from '@angular/common/locales/pt';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
-import {
-  ApplicationConfig,
-  LOCALE_ID,
-  provideBrowserGlobalErrorListeners,
-} from '@angular/core';
-import {
-  provideRouter,
-  withComponentInputBinding,
-  withInMemoryScrolling,
-} from '@angular/router';
+import { ApplicationConfig, LOCALE_ID, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { providePrimeNG } from 'primeng/config';
 
@@ -20,7 +12,6 @@ import { loadingInterceptor } from './core/interceptors/loading.interceptor';
 import { refreshInterceptor } from './core/interceptors/refresh.interceptor';
 import { serverClockInterceptor } from './core/interceptors/server-clock.interceptor';
 import { ccPreset, ccTranslation } from './core/theme/cc-preset';
-import { mockApiInterceptor } from '../mocks/mock-api.interceptor';
 import { routes } from './app.routes';
 
 registerLocaleData(localePt, 'pt-BR');
@@ -50,9 +41,6 @@ export const appConfig: ApplicationConfig = {
         refreshInterceptor,
         serverClockInterceptor,
         loadingInterceptor,
-        // Último da cadeia, no lugar do backend. Inerte quando
-        // `environment.useMockApi` é false.
-        mockApiInterceptor,
       ]),
     ),
 

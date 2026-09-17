@@ -7,136 +7,80 @@ segundo o plano em [`docs/frontend/`](../docs/frontend/).
 
 - Node.js ^22.22.3, ^24.15.0 ou ≥ 26 (testado em 26.1)
 - npm ≥ 10
+- backend e PostgreSQL em execução
 
 ## Executar
+
+Suba o backend na porta 8080 e execute:
 
 ```bash
 npm install
 npm start          # http://localhost:4200
 ```
 
-Por padrão o app sobe com o **mock da API ligado** e não precisa do backend.
+O frontend sempre usa a API real. Durante o desenvolvimento, o `proxy.conf.json`
+encaminha `/api/v1` para `http://localhost:8080`.
 
-### Contra o backend real
-
-Suba o PostgreSQL e o backend na porta 8080 e execute:
-
-```bash
-npm run start:real # http://localhost:4200
-```
-
-Esse comando usa a mesma API, autenticação e jornada do aluno do build normal,
-mas desativa o interceptor de mock por meio de uma configuração Angular própria.
-O `proxy.conf.json` encaminha `/api/v1` para `http://localhost:8080`.
-
-O backend não cria dados de demonstração de alunos, salas ou lições. Para testar
-o fluxo real, use dados existentes no PostgreSQL ou cadastre-os pelos fluxos de
-administração e conta documentados nas specs. O build correspondente pode ser
-gerado com `npm run build:real`.
-
-## Contas de demonstração (mock)
-
-Senha de todas: `senha123`
-
-| E-mail | Perfil | Serve para ver |
-|---|---|---|
-| `admin@contacerta.dev` | Administrador | Painel do admin |
-| `ana@contacerta.dev` | Professor | Acervo, salas e trilhas |
-| `carla@contacerta.dev` | Aluno | Duas salas, com progresso |
-| `diego@contacerta.dev` | Aluno | Progresso menor, para o ranking |
-| `bruno@contacerta.dev` | Professor **pendente** | O bloqueio de e-mail não confirmado no login |
-
-Os links de confirmação de e-mail, recuperação de senha e convite não são
-enviados: o mock **imprime a URL no console do navegador**. Procure por `[mock]`.
-
-O estado do mock vive em `sessionStorage` e sobrevive a recargas. Para começar
-do zero, limpe o storage da aba ou abra uma aba anônima.
+O backend não cria dados de demonstração de alunos, salas ou lições. Use dados
+existentes no PostgreSQL ou cadastre-os pelos fluxos de administração e conta.
 
 ## Comandos
 
 | Comando | O que faz |
 |---|---|
-| `npm start` | Servidor de desenvolvimento |
-| `npm run start:real` | Servidor de desenvolvimento contra a API real |
+| `npm start` | Servidor de desenvolvimento contra a API real |
 | `npm run build` | Build de produção em `dist/` |
-| `npm run build:real` | Build de desenvolvimento usando a API real |
 | `npm test` | Testes em modo watch |
 | `npm run test:ci` | Testes uma vez |
-| `npm run lint` | ESLint (TS + templates) |
-| `npm run check:rules` | Varreduras arquiteturais (ver abaixo) |
-| `npm run verify` | **Portão completo**: lint + regras + testes + build |
+| `npm run lint` | ESLint para TypeScript e templates |
+| `npm run check:rules` | Varreduras arquiteturais |
+| `npm run verify` | Lint, regras, testes e build |
 | `npm run format` | Prettier |
 
 ## Por que o `.npmrc` existe
 
-Duas coisas não óbvias vivem lá, e as duas são necessárias:
+`node-options=--no-experimental-webstorage` evita conflito entre o
+`localStorage` nativo do Node 26 e o ambiente jsdom do Vitest. Rode os testes
+pelos scripts do npm para que essa opção seja aplicada.
 
-**`node-options=--no-experimental-webstorage`.** A partir do Node 26 existe um
-`localStorage` nativo em `globalThis`, e o ambiente jsdom do Vitest só instala
-globais que ainda não existem — sem a flag, os 55 testes que tocam em storage
-quebram com `Cannot read properties of undefined`. Rode os testes pelos scripts
-do npm, não chamando o `ng` direto, ou a flag não é aplicada.
+`legacy-peer-deps=true` mantém o PrimeNG 21 sobre o Angular 22. O PrimeNG 22
+exige uma licença; sem ela, o pacote injeta um aviso visual também em produção.
 
-**`legacy-peer-deps=true`.** O PrimeNG está deliberadamente na 21 sobre o
-Angular 22. A partir da 22 o PrimeNG exige chave de licença: sem ela, o
-`providePrimeNG` injeta um banner vermelho "Invalid PrimeUI License" em toda
-página — e o caminho não tem guard de dev, então vale para produção também. O
-PrimeNG 21 declara peer de `@angular/*` ^21, daí o flag. A combinação foi
-validada em build, nos 153 testes e navegando o app.
+## Organização
 
-Se um dia houver licença do PrimeNG, dá para subir para a 22: passe a chave em
-`providePrimeNG({ license: ... })` e mova o `borderRadius` do `ccPreset` de
-`semantic` para `primitive` (mudou no `@primeuix/themes` v3).
-
-## Como o projeto está organizado
-
-```
+```text
 src/app/
-├── core/       # HTTP, sessão, erros, modelos do contrato — sem UI
-├── shared/     # Componentes, pipes e shells reutilizáveis
-└── features/   # public, account, student, teacher, admin, errors
-src/mocks/      # "Backend" in-memory, carregado sob demanda
+├── core/       # HTTP, sessão, erros e modelos do contrato
+├── shared/     # componentes, pipes e shells reutilizáveis
+└── features/   # public, account, student, teacher, admin e errors
 ```
 
-Regras de dependência, verificadas por ESLint:
+Regras de dependência verificadas pelo ESLint:
 
-- `core` não importa de `shared` nem de `features`
-- `shared` não importa de `features`
-- `features/x` não importa de `features/y`
+- `core` não importa de `shared` nem de `features`;
+- `shared` não importa de `features`;
+- `features/x` não importa de `features/y`.
 
-## As varreduras arquiteturais
+## Varreduras arquiteturais
 
-`npm run check:rules` reprova código que viola critérios da §11 da spec de
-integração e que testes cobrem mal — por exemplo, aritmética sobre nota, XP ou
-estrelas (o frontend **não** recalcula resultados), `Date.now()` em contexto de
-tentativa, `[innerHTML]` em template e URL da API em `href`.
+`npm run check:rules` impede código que recalcula nota, XP ou estrelas no
+frontend, usa o relógio local em tentativas, injeta HTML diretamente ou monta
+URL privada da API em templates.
 
-Violação legítima se marca com `cc-allow: <id-da-regra>` na linha, como um
-`eslint-disable`. O ESLint cobre o resto: `innerHTML` e `bypassSecurityTrust*`
-só existem em `cc-markdown` e `cc-video-embed`, cada um com a justificativa no
-próprio arquivo.
+Exceções justificadas usam `cc-allow: <id-da-regra>` na linha correspondente.
+O pipeline de Markdown e vídeo documenta suas permissões no próprio código.
 
 ## Estado da implementação
 
 | Parte | Documento | Situação |
 |---|---|---|
-| 1 — Núcleo (HTTP, auth, erros) | [`01-nucleo.md`](../docs/frontend/01-nucleo.md) | ✅ completa, com testes |
-| 2 — Design system e shells | [`02-design-system.md`](../docs/frontend/02-design-system.md) | ✅ completa, com testes |
-| 3 — Jornada pública e conta | [`03-publico.md`](../docs/frontend/03-publico.md) | ✅ completa |
-| 4 — Aluno | [`04-aluno.md`](../docs/frontend/04-aluno.md) | ✅ completa, com testes de integração |
-| 5 — Professor | [`05-professor.md`](../docs/frontend/05-professor.md) | ✅ completa, com testes de integração |
-| 6 — Administrador | [`06-admin.md`](../docs/frontend/06-admin.md) | ✅ completa, com testes de integração |
-| 7 — Qualidade e mock | [`07-qualidade-entrega.md`](../docs/frontend/07-qualidade-entrega.md) | ✅ varreduras, mock completo dos três perfis e 153 testes |
+| 1 — Núcleo | [`01-nucleo.md`](../docs/frontend/01-nucleo.md) | completa, com testes |
+| 2 — Design system | [`02-design-system.md`](../docs/frontend/02-design-system.md) | completa, com testes |
+| 3 — Jornada pública | [`03-publico.md`](../docs/frontend/03-publico.md) | completa |
+| 4 — Aluno | [`04-aluno.md`](../docs/frontend/04-aluno.md) | completa |
+| 5 — Professor | [`05-professor.md`](../docs/frontend/05-professor.md) | completa |
+| 6 — Administrador | [`06-admin.md`](../docs/frontend/06-admin.md) | completa |
+| 7 — Qualidade e entrega | [`07-qualidade-entrega.md`](../docs/frontend/07-qualidade-entrega.md) | lint, regras, testes e build |
 
-Tudo roda de ponta a ponta sobre o mock:
-
-1. cadastro → confirmação de e-mail → login → troca de senha → perfil;
-2. **aluno**: entrar em sala por código → trilha → lição → tentativa →
-   resultado → ranking, conquistas, videoaulas e materiais;
-3. **professor**: painel → salas → trilha e alunos → acervo de lições e
-   questões → videoaulas e materiais → relatórios com gráficos, CSV e impressão;
-4. **admin**: painel → instituições → professores (convite, ativação, reset) →
-   dicas financeiras.
-
-O código da sala "2º ano A" é `A7K9Q2`. A aluna Carla já tem progresso semeado,
-para ranking, conquistas e histórico terem o que mostrar.
+As jornadas pública, de aluno, professor e administrador consomem
+exclusivamente os contratos HTTP do backend.

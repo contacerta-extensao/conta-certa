@@ -145,18 +145,14 @@ Registrados nesta ordem em `app.config.ts`:
 | 3 | `refreshInterceptor` | Trata `401` com refresh único e repetição |
 | 4 | `serverClockInterceptor` | Mede o desvio de relógio pelo header `Date` |
 | 5 | `loadingInterceptor` | Contador global de requisições em andamento |
-| 6 | `mockApiInterceptor` | Ativo só se `environment.useMockApi`; responde como se fosse o backend (Parte 7) |
 
-A ordem importa e não é arbitrária. **A requisição percorre a lista de 1 a 6; a resposta
-volta de 6 a 1.** Duas consequências governam o desenho:
+A ordem importa e não é arbitrária. **A requisição percorre a lista de 1 a 5; a resposta
+volta de 5 a 1.** Essa ordem garante que:
 
 - `refreshInterceptor` está **depois** de `errorInterceptor` na lista, portanto vê o erro
   **antes** dele na volta. É isso que permite tratar um `HttpErrorResponse` cru: se a
   repetição der certo, nenhum erro chega ao `errorInterceptor` e a aplicação nem fica
   sabendo que houve um `401`. Só o que o refresh não resolve vira `ApiError`.
-- `mockApiInterceptor` é o **último**, no lugar do backend. Assim ele recebe a requisição já
-  com o header `Authorization` e pode validar tokens, expirar sessão e devolver `401` de
-  verdade — exercitando o ciclo de refresh em desenvolvimento.
 
 ### 5.1 `errorInterceptor` e `ApiError`
 

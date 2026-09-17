@@ -9,7 +9,7 @@
 - [Contrato do backend](docs/backend-spec.md): domínio, regras de negócio, persistência, autorização e endpoints.
 - [Contrato de integração do frontend](docs/frontend-integration-spec.md): payloads, estados, permissões e comportamento esperado das telas.
 - [Plano do frontend](docs/frontend/00-visao-geral.md): organização Angular, design system, jornadas e critérios de qualidade.
-- [README do frontend](frontend/README.md): execução, mock da API, comandos e estado das partes implementadas.
+- [README do frontend](frontend/README.md): execução contra a API real, comandos e estado das partes implementadas.
 
 Quando este documento divergir dos contratos acima, os contratos atuais têm precedência.
 
@@ -25,7 +25,7 @@ Quando este documento divergir dos contratos acima, os contratos atuais têm pre
 
 A API usa o prefixo `/api/v1`, JSON em `camelCase`, UUIDs como identificadores e instantes em UTC. O frontend apresenta datas no fuso `America/Sao_Paulo`.
 
-O domínio não depende de `localStorage`. O frontend pode usar um mock plugável para desenvolvimento, mas a fonte de verdade em produção é a API com PostgreSQL.
+O domínio não depende de `localStorage`. O frontend usa a API com PostgreSQL como única fonte de verdade.
 
 ## 3. Perfis e funcionalidades
 
@@ -89,7 +89,7 @@ A versão anterior deste arquivo descrevia:
 - seis lições fixas com quatro questões embutidas;
 - uma única sala vinculada ao aluno.
 
-Esses pontos pertencem ao protótipo original e foram substituídos pela arquitetura e pelos contratos atuais. A semente de demonstração do mock do frontend pode conter conteúdo de exemplo, mas esse conteúdo não é uma obrigação do banco de produção.
+Esses pontos pertencem ao protótipo original e foram substituídos pela arquitetura e pelos contratos atuais. Conteúdo de demonstração não é uma obrigação do banco de produção.
 
 ## 6. Próximas implementações
 
@@ -120,4 +120,4 @@ cd frontend
 npm run verify
 ```
 
-O frontend possui mock plugável para desenvolvimento. Para usar o backend real, configure `useMockApi: false` no ambiente do frontend e forneça as variáveis de banco, JWT e SMTP descritas na configuração do backend.
+O frontend sempre usa o backend real. Forneça as variáveis de banco, JWT e SMTP descritas na configuração do backend antes de iniciar os dois projetos.

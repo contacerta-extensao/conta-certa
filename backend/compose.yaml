@@ -1,4 +1,44 @@
 services:
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: contacerta-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-4200}:80"
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: contacerta-backend
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-contacerta}
+      DB_USERNAME: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-root}
+      JWT_PRIVATE_KEY_LOCATION: file:/app/keys/jwt-private.pem
+      JWT_PUBLIC_KEY_LOCATION: file:/app/keys/jwt-public.pem
+      INITIAL_ADMIN_NAME: ${INITIAL_ADMIN_NAME:-}
+      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:4200}
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      MAIL_FROM: ${MAIL_FROM:-Conta Certa <no-reply@contacerta.local>}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    volumes:
+      - jwt_keys:/app/keys
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+
   postgres:
     image: postgres:17-alpine
     container_name: contacerta-postgres
@@ -28,3 +68,4 @@ services:
 
 volumes:
   postgres_data:
+  jwt_keys:
