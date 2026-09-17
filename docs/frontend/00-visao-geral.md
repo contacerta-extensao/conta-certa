@@ -64,7 +64,7 @@ frontend/
 │   │   ├── _theme.scss              # preset Aura customizado (tokens Conta Certa)
 │   │   └── _utilities.scss          # utilitários de layout
 │   ├── environments/
-│   │   ├── environment.ts           # dev: apiBaseUrl, useMockApi
+│   │   ├── environment.ts           # desenvolvimento: apiBaseUrl e fuso
 │   │   └── environment.prod.ts
 │   └── app/
 │       ├── app.config.ts            # providers raiz
@@ -74,7 +74,7 @@ frontend/
 │       ├── core/                    # PARTE 1 — sem dependência de UI de feature
 │       │   ├── api/                 # ApiClient, tipos de paginação, Problem Details
 │       │   ├── auth/                # AuthStore, TokenStorage, sessão, guards
-│       │   ├── interceptors/        # auth, refresh, erro, loading, mock
+│       │   ├── interceptors/        # auth, refresh, erro, relógio e loading
 │       │   ├── models/              # tipos e enums do contrato da API
 │       │   ├── notifications/       # wrapper de toast/confirm
 │       │   └── util/                # datas, moeda, clock skew, idempotency key
@@ -153,7 +153,7 @@ começa quando as que ela lista como pré-requisito estiverem concluídas.
 | 4 | Frontend do aluno | [`04-aluno.md`](04-aluno.md) | 1, 2 |
 | 5 | Frontend do professor | [`05-professor.md`](05-professor.md) | 1, 2 |
 | 6 | Frontend do administrador | [`06-admin.md`](06-admin.md) | 1, 2 |
-| 7 | Qualidade, mock e entrega | [`07-qualidade-entrega.md`](07-qualidade-entrega.md) | todas |
+| 7 | Qualidade e entrega | [`07-qualidade-entrega.md`](07-qualidade-entrega.md) | todas |
 
 As partes 4, 5 e 6 não se tocam e podem ser desenvolvidas em paralelo depois da 2.
 
@@ -177,14 +177,12 @@ As partes 4, 5 e 6 não se tocam e podem ser desenvolvidas em paralelo depois da
 export const environment = {
   production: false,
   apiBaseUrl: '/api/v1',
-  useMockApi: true,          // Parte 7: interceptor in-memory
   presentationTimeZone: 'America/Sao_Paulo',
 };
 ```
 
-`proxy.conf.json` encaminha `/api/v1` para `http://localhost:8080` no `ng serve`. Quando
-`useMockApi` for `true`, o interceptor de mock responde antes de a requisição sair, e o proxy
-é irrelevante. A troca entre mock e backend real é só essa flag: nenhum service muda.
+`proxy.conf.json` encaminha `/api/v1` para `http://localhost:8080` no `ng serve`.
+O backend real é a única fonte de dados em todos os ambientes.
 
 ## 9. Definição de pronto (aplicável a toda parte)
 
