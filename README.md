@@ -11,10 +11,18 @@ cp .env.example .env
 docker compose up --build
 ```
 
+No PowerShell, use:
+
+```powershell
+Set-Location backend
+Copy-Item .env.example .env
+docker compose up --build
+```
+
 Depois da inicialização, acesse:
 
 - frontend: <http://localhost:4200>;
 - API: <http://localhost:8080/api/v1>;
 - Mailpit: <http://localhost:8025>.
 
-As chaves RSA usadas nos tokens JWT são criadas automaticamente no volume `jwt_keys` na primeira inicialização. Para criar o administrador inicial, preencha as três variáveis `INITIAL_ADMIN_*` no arquivo `.env` antes de subir os serviços.
+As chaves RSA usadas nos tokens JWT são criadas automaticamente dentro do contêiner do backend e armazenadas no volume `jwt_keys` na primeira inicialização. Não execute `docker-entrypoint.sh` diretamente no sistema hospedeiro. Para criar o administrador inicial, preencha as três variáveis `INITIAL_ADMIN_*` no arquivo `.env` antes de subir os serviços.
