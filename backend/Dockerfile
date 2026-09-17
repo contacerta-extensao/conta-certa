@@ -4,7 +4,9 @@ WORKDIR /workspace
 
 COPY .mvn .mvn
 COPY mvnw pom.xml ./
-RUN ./mvnw dependency:go-offline -DskipTests
+RUN sed -i 's/\r$//' mvnw && \
+    chmod +x mvnw && \
+    ./mvnw dependency:go-offline -DskipTests
 
 COPY src src
 RUN ./mvnw package -DskipTests && \
@@ -21,7 +23,8 @@ WORKDIR /app
 COPY --from=build /workspace/app.jar app.jar
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh && \
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && \
+    chmod +x /usr/local/bin/docker-entrypoint.sh && \
     mkdir -p /app/keys && \
     chown -R contacerta:contacerta /app
 
