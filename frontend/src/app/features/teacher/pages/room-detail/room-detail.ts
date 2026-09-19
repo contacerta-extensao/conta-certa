@@ -133,6 +133,11 @@ export class RoomDetailPage {
   }
 
   protected async archive(): Promise<void> {
+    const room = this.state.data();
+    if (!room) {
+      return;
+    }
+
     const confirmed = await this.notify.destructive({
       header: 'Arquivar esta sala?',
       message:
@@ -146,7 +151,7 @@ export class RoomDetailPage {
 
     await this.guard.run(async () => {
       try {
-        await this.rooms.archive(this.roomId());
+        await this.rooms.archive(room.id, room.version);
         this.notify.success('Sala arquivada');
         await this.state.refresh();
       } catch (error) {

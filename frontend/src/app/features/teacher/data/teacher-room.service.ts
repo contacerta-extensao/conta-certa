@@ -48,8 +48,8 @@ export class TeacherRoomService {
     return firstValueFrom(this.api.patch<TeacherRoomDetail>(`${this.base}/${roomId}`, body));
   }
 
-  archive(roomId: string): Promise<TeacherRoomDetail> {
-    return firstValueFrom(this.api.post<TeacherRoomDetail>(`${this.base}/${roomId}/archive`));
+  archive(roomId: string, version: number): Promise<TeacherRoomDetail> {
+    return firstValueFrom(this.api.post<TeacherRoomDetail>(`${this.base}/${roomId}/archive`, { version }));
   }
 
   /** Só permitido em sala nunca utilizada; a API responde `409` caso contrário. */

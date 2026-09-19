@@ -88,7 +88,7 @@ export class TeacherRoomsPage {
     });
 
     if (confirmed) {
-      await this.run(room.id, () => this.rooms.archive(room.id), 'Sala arquivada');
+      await this.run(room.id, () => this.rooms.archive(room.id, room.version), 'Sala arquivada');
     }
   }
 
