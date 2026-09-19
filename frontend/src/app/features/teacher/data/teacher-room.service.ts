@@ -53,18 +53,18 @@ export class TeacherRoomService {
   }
 
   /** Só permitido em sala nunca utilizada; a API responde `409` caso contrário. */
-  remove(roomId: string): Promise<void> {
-    return firstValueFrom(this.api.delete<void>(`${this.base}/${roomId}`));
+  remove(roomId: string, version: number): Promise<void> {
+    return firstValueFrom(this.api.delete<void>(`${this.base}/${roomId}`, { body: { version } }));
   }
 
   /** Copia a configuração. Alunos e progresso **não** são copiados. */
-  duplicate(roomId: string): Promise<TeacherRoomDetail> {
-    return firstValueFrom(this.api.post<TeacherRoomDetail>(`${this.base}/${roomId}/duplicate`));
+  duplicate(roomId: string, version: number): Promise<TeacherRoomDetail> {
+    return firstValueFrom(this.api.post<TeacherRoomDetail>(`${this.base}/${roomId}/duplicate`, { version }));
   }
 
-  regenerateCode(roomId: string): Promise<TeacherRoomDetail> {
+  regenerateCode(roomId: string, version: number): Promise<TeacherRoomDetail> {
     return firstValueFrom(
-      this.api.post<TeacherRoomDetail>(`${this.base}/${roomId}/regenerate-code`),
+      this.api.post<TeacherRoomDetail>(`${this.base}/${roomId}/regenerate-code`, { version }),
     );
   }
 }

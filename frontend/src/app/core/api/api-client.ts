@@ -30,6 +30,10 @@ export interface MutationOptions extends RequestOptions {
   idempotencyKey?: string;
 }
 
+export interface DeleteOptions extends MutationOptions {
+  body?: unknown;
+}
+
 export interface UploadProgress {
   kind: 'progress';
   /** 0 a 100, ou `null` quando o total é desconhecido. */
@@ -80,8 +84,8 @@ export class ApiClient {
     return this.http.put<T>(this.url(path), body, this.httpOptions(options));
   }
 
-  delete<T>(path: string, options: MutationOptions = {}): Observable<T> {
-    return this.http.delete<T>(this.url(path), this.httpOptions(options));
+  delete<T>(path: string, options: DeleteOptions = {}): Observable<T> {
+    return this.http.delete<T>(this.url(path), { ...this.httpOptions(options), body: options.body });
   }
 
   /**

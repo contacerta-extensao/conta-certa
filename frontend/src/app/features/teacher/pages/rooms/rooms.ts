@@ -102,7 +102,7 @@ export class TeacherRoomsPage {
     });
 
     if (confirmed) {
-      await this.run(room.id, () => this.rooms.duplicate(room.id), 'Sala duplicada');
+      await this.run(room.id, () => this.rooms.duplicate(room.id, room.version), 'Sala duplicada');
     }
   }
 
@@ -115,7 +115,7 @@ export class TeacherRoomsPage {
     });
 
     if (confirmed) {
-      await this.run(room.id, () => this.rooms.regenerateCode(room.id), 'Código regenerado');
+      await this.run(room.id, () => this.rooms.regenerateCode(room.id, room.version), 'Código regenerado');
     }
   }
 
@@ -128,7 +128,7 @@ export class TeacherRoomsPage {
     });
 
     if (confirmed) {
-      await this.run(room.id, () => this.rooms.remove(room.id), 'Sala excluída');
+      await this.run(room.id, () => this.rooms.remove(room.id, room.version), 'Sala excluída');
     }
   }
 
