@@ -6,6 +6,7 @@
       severity="secondary"
       [outlined]="true"
       [loading]="exportGuard.submitting()"
+      [disabled]="!roomId()"
       (onClick)="exportCsv()"
     />
     <p-button
@@ -13,6 +14,7 @@
       icon="pi pi-print"
       severity="secondary"
       [outlined]="true"
+      [disabled]="!roomId()"
       (onClick)="print()"
     />
   </cc-page-header>
@@ -27,9 +29,9 @@
         optionValue="id"
         [ngModel]="roomId()"
         (ngModelChange)="roomId.set($event)"
-        [showClear]="true"
+        [showClear]="false"
         [loading]="roomOptions.isLoading()"
-        placeholder="Todas as salas"
+        placeholder="Selecione uma sala"
         emptyMessage="Você ainda não tem salas"
       />
     </div>
@@ -62,6 +64,17 @@
     }
   </section>
 
+  @if (roomOptions.error(); as error) {
+    <cc-error-state [error]="error" (retry)="roomOptions.retry()" (back)="roomOptions.retry()" />
+  } @else if (!roomOptions.isLoading() && !roomId()) {
+    <cc-empty-state
+      title="Nenhuma sala para consultar"
+      message="Crie uma sala para acompanhar os relatórios da turma."
+      actionLabel="Ir para salas"
+      icon="pi pi-chart-bar"
+      (action)="goToRooms()"
+    />
+  } @else if (roomId()) {
   <!-- O recorte é dito, não presumido. Vale também na impressão. -->
   <p class="period-note cc-small">
     <i class="pi pi-calendar" aria-hidden="true"></i>
@@ -269,5 +282,6 @@
         </div>
       }
     }
+  }
   }
 </div>

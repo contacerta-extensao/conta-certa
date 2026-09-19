@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { Button } from 'primeng/button';
 import { UIChart } from 'primeng/chart';
 import { DatePicker } from 'primeng/datepicker';
@@ -61,6 +62,7 @@ export class ReportsPage {
   private readonly reports = inject(ReportService);
   private readonly rooms = inject(TeacherRoomService);
   private readonly notify = inject(NotificationService);
+  private readonly router = inject(Router);
 
   protected readonly activeTab = signal<TabId>('visao-geral');
 
@@ -180,10 +182,18 @@ export class ReportsPage {
   };
 
   constructor() {
-    void this.roomOptions.load();
+    void this.roomOptions.load().then(() => {
+      const firstRoom = this.roomOptions.data()?.[0];
+      if (!this.roomId() && firstRoom) {
+        this.roomId.set(firstRoom.id);
+      }
+    });
 
     effect(() => {
       this.filters();
+      if (!this.roomId()) {
+        return;
+      }
       void this.overview.load();
       void this.students.load();
       void this.ranking.load();
@@ -192,6 +202,10 @@ export class ReportsPage {
 
   protected selectTab(tab: TabId): void {
     this.activeTab.set(tab);
+  }
+
+  protected goToRooms(): void {
+    void this.router.navigate(['/professor/salas']);
   }
 
   /** O CSV vem do backend: o frontend não monta arquivo de relatório. */
