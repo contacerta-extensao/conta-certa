@@ -134,6 +134,26 @@ describe('refreshInterceptor', () => {
 
     http.expectNone((r) => r.url.includes('/auth/refresh'));
     expect(failure?.status).toBe(401);
+    expect(storage.refreshToken()).toBeNull();
+  });
+
+  it('preserva a sessão e o erro real quando a repetição falha com 500', () => {
+    let failure: ApiError | undefined;
+    api.get('/a').subscribe({ error: (e: ApiError) => (failure = e) });
+
+    http.expectOne((r) => r.url.endsWith('/a')).flush(null, {
+      status: 401,
+      statusText: 'Unauthorized',
+    });
+    http.expectOne((r) => r.url.includes('/auth/refresh')).flush(tokens('v2'));
+    http.expectOne((r) => r.url.endsWith('/a')).flush(null, {
+      status: 500,
+      statusText: 'Server Error',
+    });
+
+    expect(failure?.status).toBe(500);
+    expect(storage.refreshToken()).toBe('refresh-v2');
+    expect(storage.accessToken()).toBe('access-v2');
   });
 
   it('não dispara refresh para um 401 de rota pública', async () => {

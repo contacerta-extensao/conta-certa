@@ -41,12 +41,21 @@ export const refreshInterceptor: HttpInterceptorFn = (req, next) => {
       }
 
       return store.refresh().pipe(
-        switchMap(() => next(retryWithFreshToken(req, storage.accessToken()))),
         catchError(() => {
           // O `AuthStore` já limpou a sessão ao falhar o refresh.
           void store.expireSession();
           return throwError(() => error);
         }),
+        switchMap(() =>
+          next(retryWithFreshToken(req, storage.accessToken())).pipe(
+            catchError((retryError: unknown) => {
+              if (isUnauthorized(retryError)) {
+                void store.expireSession();
+              }
+              return throwError(() => retryError);
+            }),
+          ),
+        ),
       );
     }),
   );
