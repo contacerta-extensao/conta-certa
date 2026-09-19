@@ -107,6 +107,11 @@ export class RoomDetailPage {
   }
 
   protected async regenerateCode(): Promise<void> {
+    const room = this.state.data();
+    if (!room) {
+      return;
+    }
+
     const confirmed = await this.notify.destructive({
       header: 'Gerar um código novo?',
       message:
@@ -121,7 +126,7 @@ export class RoomDetailPage {
     await this.guard.run(async () => {
       this.regenerating.set(true);
       try {
-        await this.rooms.regenerateCode(this.roomId());
+        await this.rooms.regenerateCode(room.id, room.version);
         this.notify.success('Código regenerado', 'Distribua o novo código para a turma.');
         await this.state.refresh();
       } catch (error) {
@@ -133,6 +138,11 @@ export class RoomDetailPage {
   }
 
   protected async archive(): Promise<void> {
+    const room = this.state.data();
+    if (!room) {
+      return;
+    }
+
     const confirmed = await this.notify.destructive({
       header: 'Arquivar esta sala?',
       message:
@@ -146,7 +156,7 @@ export class RoomDetailPage {
 
     await this.guard.run(async () => {
       try {
-        await this.rooms.archive(this.roomId());
+        await this.rooms.archive(room.id, room.version);
         this.notify.success('Sala arquivada');
         await this.state.refresh();
       } catch (error) {
