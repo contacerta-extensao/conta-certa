@@ -102,7 +102,7 @@ export class TeacherRoomsPage {
     });
 
     if (confirmed) {
-      await this.run(room.id, () => this.rooms.duplicate(room.id, room.version), 'Sala duplicada');
+      await this.run(room.id, () => this.rooms.duplicate(room.id), 'Sala duplicada');
     }
   }
 
@@ -150,6 +150,14 @@ export class TeacherRoomsPage {
   private handleFailure(error: unknown): void {
     if (!(error instanceof ApiError)) {
       this.notify.error('Não foi possível concluir a ação.');
+      return;
+    }
+
+    if (error.fieldErrors.length > 0) {
+      this.notify.error(
+        error.fieldErrors.map(({ field, message }) => `${field}: ${message}`).join(' '),
+        'Dados inválidos',
+      );
       return;
     }
 

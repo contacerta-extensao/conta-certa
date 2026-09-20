@@ -58,8 +58,13 @@ export class TeacherRoomService {
   }
 
   /** Copia a configuração. Alunos e progresso **não** são copiados. */
-  duplicate(roomId: string, version: number): Promise<TeacherRoomDetail> {
-    return firstValueFrom(this.api.post<TeacherRoomDetail>(`${this.base}/${roomId}/duplicate`, { version }));
+  async duplicate(roomId: string): Promise<TeacherRoomDetail> {
+    const room = await this.get(roomId);
+    return firstValueFrom(
+      this.api.post<TeacherRoomDetail>(`${this.base}/${roomId}/duplicate`, {
+        version: room.version,
+      }),
+    );
   }
 
   regenerateCode(roomId: string, version: number): Promise<TeacherRoomDetail> {
