@@ -37,13 +37,19 @@ describe('TeacherRoomService', () => {
     request.flush({ id: 'room-1', version: 4 });
   });
 
-  it('envia a versão atual ao duplicar a sala', () => {
-    void rooms.duplicate('room-1', 3);
+  it('busca o detalhe antes de duplicar para enviar a versão atual', async () => {
+    const result = rooms.duplicate('room-1');
+
+    const detail = http.expectOne('/api/v1/teacher/rooms/room-1');
+    expect(detail.request.method).toBe('GET');
+    detail.flush({ id: 'room-1', name: 'Sala original', version: 3 });
+    await Promise.resolve();
 
     const request = http.expectOne('/api/v1/teacher/rooms/room-1/duplicate');
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({ version: 3 });
     request.flush({ id: 'room-2', version: 0 });
+    await result;
   });
 
   it('envia a versão atual ao excluir a sala', () => {

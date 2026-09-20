@@ -102,7 +102,7 @@ export class TeacherRoomsPage {
     });
 
     if (confirmed) {
-      await this.run(room.id, () => this.rooms.duplicate(room.id, room.version), 'Sala duplicada');
+      await this.run(room.id, () => this.rooms.duplicate(room.id), 'Sala duplicada');
     }
   }
 
