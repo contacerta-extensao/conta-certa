@@ -153,6 +153,14 @@ export class TeacherRoomsPage {
       return;
     }
 
+    if (error.fieldErrors.length > 0) {
+      this.notify.error(
+        error.fieldErrors.map(({ field, message }) => `${field}: ${message}`).join(' '),
+        'Dados inválidos',
+      );
+      return;
+    }
+
     // `409` na exclusão significa que a sala já foi usada — a saída é arquivar.
     if (error.status === 409) {
       this.notify.warn(
