@@ -67,7 +67,18 @@ export class LessonService {
    */
   uploadImage(lessonId: string, file: File): Observable<UploadEvent<LessonImage>> {
     const form = new FormData();
-    form.append('file', file, file.name);
+    const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
+    const mimeType: Record<string, string> = {
+      png: 'image/png',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      webp: 'image/webp',
+    };
+    const upload =
+      (!file.type || file.type === 'application/octet-stream') && mimeType[extension]
+        ? new File([file], file.name, { type: mimeType[extension] })
+        : file;
+    form.append('file', upload, upload.name);
     return this.api.postMultipart<LessonImage>(`${this.base}/${lessonId}/images`, form);
   }
 }
