@@ -37,4 +37,15 @@ describe('LessonAssignmentService', () => {
     });
     request.flush([]);
   });
+
+  it('envia a versão na query ao retirar uma lição da trilha', () => {
+    void assignments.remove('room-1', 'assignment-1', 9);
+
+    const request = http.expectOne(
+      '/api/v1/teacher/rooms/room-1/lesson-assignments/assignment-1?version=9',
+    );
+    expect(request.request.method).toBe('DELETE');
+    expect(request.request.body).toBeNull();
+    request.flush(null);
+  });
 });

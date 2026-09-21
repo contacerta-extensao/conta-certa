@@ -37,8 +37,10 @@ export class LessonAssignmentService {
   }
 
   /** Só atribuição futura sai da trilha; a API responde `409` caso contrário. */
-  remove(roomId: string, assignmentId: string): Promise<void> {
-    return firstValueFrom(this.api.delete<void>(`${this.path(roomId)}/${assignmentId}`));
+  remove(roomId: string, assignmentId: string, version: number): Promise<void> {
+    return firstValueFrom(
+      this.api.delete<void>(`${this.path(roomId)}/${assignmentId}`, { params: { version } }),
+    );
   }
 
   reorder(roomId: string, body: AssignmentOrderRequest): Promise<LessonAssignment[]> {

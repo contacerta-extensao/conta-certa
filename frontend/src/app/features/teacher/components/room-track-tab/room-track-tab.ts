@@ -131,7 +131,7 @@ export class RoomTrackTabComponent {
     await this.guard.run(async () => {
       this.busyId.set(assignment.id);
       try {
-        await this.assignments.remove(this.roomId(), assignment.id);
+        await this.assignments.remove(this.roomId(), assignment.id, assignment.version);
         this.notify.success('Lição retirada da trilha');
         await this.state.refresh();
         this.changed.emit();
