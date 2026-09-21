@@ -13,6 +13,7 @@ export interface RoomStudent {
   email: string;
   /** XP acumulado **nesta** sala. Isolamento por sala, §11 da spec. */
   xp: number;
+  level: number;
   completedLessons: number;
   totalLessons: number;
   stars: number;

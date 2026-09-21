@@ -61,6 +61,7 @@ export class LessonsPage {
   protected readonly status = signal<ContentStatus | null>(null);
   protected readonly query = signal<PageQuery>({ page: 0, size: 50 });
   protected readonly busyId = signal<string | null>(null);
+  private readonly menuCache = new Map<string, { status: ContentStatus; items: MenuItem[] }>();
 
   protected readonly guard = createSubmitGuard();
 
@@ -86,6 +87,9 @@ export class LessonsPage {
   }
 
   protected menuFor(lesson: LessonSummary): MenuItem[] {
+    const cached = this.menuCache.get(lesson.id);
+    if (cached?.status === lesson.status) return cached.items;
+
     const items: MenuItem[] = [
       {
         label: 'Editar',
@@ -119,6 +123,7 @@ export class LessonsPage {
       );
     }
 
+    this.menuCache.set(lesson.id, { status: lesson.status, items });
     return items;
   }
 

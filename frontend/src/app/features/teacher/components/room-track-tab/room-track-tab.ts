@@ -100,7 +100,10 @@ export class RoomTrackTabComponent {
     await this.guard.run(async () => {
       try {
         const saved = await this.assignments.reorder(this.roomId(), {
-          assignmentIds: reordered.map((item) => item.id),
+          assignments: reordered.map((item) => ({
+            assignmentId: item.id,
+            version: item.version,
+          })),
         });
         this.state.set(saved);
       } catch (error) {
@@ -128,7 +131,7 @@ export class RoomTrackTabComponent {
     await this.guard.run(async () => {
       this.busyId.set(assignment.id);
       try {
-        await this.assignments.remove(this.roomId(), assignment.id);
+        await this.assignments.remove(this.roomId(), assignment.id, assignment.version);
         this.notify.success('Lição retirada da trilha');
         await this.state.refresh();
         this.changed.emit();

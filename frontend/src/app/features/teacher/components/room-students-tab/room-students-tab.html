@@ -39,6 +39,7 @@
               <th scope="col">Aluno</th>
               <th scope="col">Matrícula</th>
               <th scope="col">XP na sala</th>
+              <th scope="col">Nível</th>
               <th scope="col">Lições</th>
               <th scope="col">Estrelas</th>
               <th scope="col">Última atividade</th>
@@ -56,6 +57,7 @@
               </td>
               <td>{{ student.registrationNumber ?? '—' }}</td>
               <td class="students__xp">{{ student.xp }}</td>
+              <td>{{ student.level }}</td>
               <td>{{ student.completedLessons }}/{{ student.totalLessons }}</td>
               <td class="students__stars">
                 <i class="pi pi-star-fill" aria-hidden="true"></i> {{ student.stars }}

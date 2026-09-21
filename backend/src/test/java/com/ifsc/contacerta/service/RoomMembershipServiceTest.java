@@ -198,7 +198,7 @@ class RoomMembershipServiceTest {
 		Room room = room("ABC243", teacher, institution);
 		var response = new RoomStudentResponse(
 				student.getId(), student.getFullName(), student.getRegistrationNumber(), student.getEmail(),
-				0, 0, 0, 0, null, MembershipStatus.ACTIVE
+				0, 1, 0, 0, 0, null, MembershipStatus.ACTIVE
 		);
 		PageRequest pageable = PageRequest.of(0, 20);
 		when(userRepository.findById(teacher.getId())).thenReturn(Optional.of(teacher));

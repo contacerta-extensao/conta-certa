@@ -44,14 +44,19 @@ public interface RoomMembershipRepository extends JpaRepository<RoomMembership, 
 				membership.student.fullName,
 				membership.student.registrationNumber,
 				membership.student.email,
-				0,
-				0,
-				0,
-				0,
-				null,
+				coalesce(progress.totalXp, 0),
+				coalesce(progress.level, 1),
+				coalesce(progress.passedAssignmentCount, 0),
+				(select count(assignment.id) from LessonAssignment assignment
+				 where assignment.room.id = membership.room.id
+				 and assignment.status = com.ifsc.contacerta.model.ContentStatus.PUBLISHED),
+				coalesce(progress.totalBestStars, 0),
+				progress.lastActivityAt,
 				membership.status
 			)
 			from RoomMembership membership
+			left join RoomStudentProgress progress
+				on progress.room.id = membership.room.id and progress.student.id = membership.student.id
 			where membership.room.id = :roomId
 			and membership.status = :status
 			and (

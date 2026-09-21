@@ -186,6 +186,13 @@ function parseProblem(body: unknown): ProblemDetails | null {
  * Stack traces e mensagens técnicas caem na mensagem padrão do status.
  */
 function presentableDetail(problem: ProblemDetails | null, status: number): string {
+  if (
+    status === 401 &&
+    (problem?.code === 'INVALID_ACCESS_TOKEN' || problem?.code === 'INVALID_REFRESH_TOKEN')
+  ) {
+    return defaultMessageForStatus(status);
+  }
+
   const detail = problem?.detail?.trim();
   if (!detail) {
     return defaultMessageForStatus(status);
