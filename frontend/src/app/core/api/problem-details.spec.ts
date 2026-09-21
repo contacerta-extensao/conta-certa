@@ -61,6 +61,17 @@ describe('ApiError', () => {
     expect(ApiError.fromHttp(httpError(500, {})).detail).toContain('servidor');
   });
 
+  it('traduz falha de access token para a mensagem de sessão expirada', () => {
+    const error = ApiError.fromHttp(
+      httpError(401, {
+        code: 'INVALID_ACCESS_TOKEN',
+        detail: 'Access token is invalid or expired.',
+      }),
+    );
+
+    expect(error.detail).toBe(defaultMessageForStatus(401));
+  });
+
   it('descarta detail técnico em favor da mensagem padrão', () => {
     const error = ApiError.fromHttp(
       httpError(500, { detail: 'java.lang.NullPointerException: cannot invoke getId()' }),
