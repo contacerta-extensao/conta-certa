@@ -11,8 +11,9 @@ public record RoomStudentResponse(
 		String registrationNumber,
 		String email,
 		long xp,
+		int level,
 		int completedLessons,
-		int totalLessons,
+		long totalLessons,
 		int stars,
 		Instant lastActivityAt,
 		MembershipStatus membershipStatus
