@@ -57,8 +57,13 @@ export interface PatchAssignmentRequest extends Partial<AssignmentPayload> {
 }
 
 /** `PUT /teacher/rooms/{roomId}/lesson-assignments/order`. */
+export interface AssignmentOrderItem {
+  assignmentId: string;
+  version: number;
+}
+
 export interface AssignmentOrderRequest {
-  assignmentIds: string[];
+  assignments: AssignmentOrderItem[];
 }
 
 /** Padrões de criação — §7.3 da spec: 30 minutos e 3 tentativas. */

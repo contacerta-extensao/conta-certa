@@ -100,7 +100,10 @@ export class RoomTrackTabComponent {
     await this.guard.run(async () => {
       try {
         const saved = await this.assignments.reorder(this.roomId(), {
-          assignmentIds: reordered.map((item) => item.id),
+          assignments: reordered.map((item) => ({
+            assignmentId: item.id,
+            version: item.version,
+          })),
         });
         this.state.set(saved);
       } catch (error) {
