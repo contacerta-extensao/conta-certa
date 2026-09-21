@@ -18,8 +18,8 @@ public interface VideoRepository extends JpaRepository<Video, UUID> {
 			select video from Video video
 			where video.teacher.id = :teacherId
 			and video.status <> :excludedStatus
-			and (:search is null or lower(video.title) like lower(concat('%', :search, '%'))
-				or lower(coalesce(video.description, '')) like lower(concat('%', :search, '%')))
+			and (:search is null or lower(video.title) like lower(concat('%', cast(:search as string), '%'))
+				or lower(coalesce(video.description, '')) like lower(concat('%', cast(:search as string), '%')))
 			and (:category is null or video.category = :category)
 			""")
 	Page<Video> searchOwned(
