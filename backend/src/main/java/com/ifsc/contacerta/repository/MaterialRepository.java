@@ -19,8 +19,8 @@ public interface MaterialRepository extends JpaRepository<Material, UUID> {
 			select material from Material material
 			where material.teacher.id = :teacherId
 			and material.status <> :excludedStatus
-			and (:search is null or lower(material.title) like lower(concat('%', :search, '%'))
-				or lower(coalesce(material.description, '')) like lower(concat('%', :search, '%')))
+			and (:search is null or lower(material.title) like lower(concat('%', cast(:search as string), '%'))
+				or lower(coalesce(material.description, '')) like lower(concat('%', cast(:search as string), '%')))
 			and (:kind is null or material.kind = :kind)
 			""")
 	Page<Material> searchOwned(
