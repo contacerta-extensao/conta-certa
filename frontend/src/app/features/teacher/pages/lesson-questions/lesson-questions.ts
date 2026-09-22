@@ -58,6 +58,36 @@ export class LessonQuestionsPage {
 
   private readonly guard = createSubmitGuard();
 
+  protected readonly confirmSharedQuestionChange = async (): Promise<boolean> => {
+    let lesson = this.lesson.data();
+    if (!lesson) {
+      await this.lesson.load();
+      lesson = this.lesson.data();
+    }
+
+    if (!lesson) {
+      this.notify.error(
+        'Não foi possível confirmar o alcance da alteração',
+        'Recarregue a lição antes de salvar esta questão.',
+      );
+      return false;
+    }
+
+    if (lesson.assignmentCount === 0) {
+      return true;
+    }
+
+    const roomLabel = lesson.assignmentCount === 1 ? 'sala' : 'salas';
+    return this.notify.confirm({
+      header: `Alteração compartilhada com ${lesson.assignmentCount} ${roomLabel}`,
+      message:
+        `Esta alteração afeta as próximas tentativas em todas essas salas. ` +
+        'Tentativas já iniciadas ou concluídas mantêm a versão atual.',
+      acceptLabel: 'Continuar',
+      rejectLabel: 'Continuar editando',
+    });
+  };
+
   protected readonly crumbs = computed<Crumb[]>(() => [
     { label: 'Lições', link: '/professor/licoes' },
     { label: this.lesson.data()?.title ?? 'Lição', link: `/professor/licoes/${this.lessonId()}` },
@@ -99,6 +129,10 @@ export class LessonQuestionsPage {
       return;
     }
 
+    if (!(await this.confirmSharedQuestionChange())) {
+      return;
+    }
+
     const reordered = [...current];
     [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
     this.state.set(reordered);
@@ -120,9 +154,15 @@ export class LessonQuestionsPage {
   }
 
   protected async remove(question: Question): Promise<void> {
+    const assignmentCount = this.lesson.data()?.assignmentCount ?? 0;
+    const sharedImpact =
+      assignmentCount > 0
+        ? `A remoção afeta as próximas tentativas nas ${assignmentCount} ${assignmentCount === 1 ? 'sala' : 'salas'} que usam esta lição; tentativas já iniciadas ou concluídas preservam sua versão. `
+        : '';
     const confirmed = await this.notify.destructive({
       header: 'Excluir esta questão?',
       message:
+        sharedImpact +
         'Se a questão já foi respondida por algum aluno, ela será arquivada em vez de removida — as tentativas antigas precisam continuar íntegras.',
       acceptLabel: 'Excluir',
     });
