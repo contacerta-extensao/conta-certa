@@ -9,7 +9,7 @@ import { SelectButton } from 'primeng/selectbutton';
 import { TableModule } from 'primeng/table';
 
 import { ApiError } from '../../../../core/api/problem-details';
-import type { PageQuery } from '../../../../core/models/page';
+import type { Page, PageQuery } from '../../../../core/models/page';
 import { NotificationService } from '../../../../core/notifications/notification.service';
 import { createSubmitGuard } from '../../../../core/util/submitting';
 import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state';
@@ -17,11 +17,11 @@ import { ErrorStateComponent } from '../../../../shared/components/error-state/e
 import { LoadingSkeletonComponent } from '../../../../shared/components/loading-skeleton/loading-skeleton';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header';
 import { ProgressBarComponent } from '../../../../shared/components/progress-bar/progress-bar';
-import { createPageState } from '../../../../shared/forms/page-state';
-import { DateTimePipe, RelativeTimePipe } from '../../../../shared/pipes/format.pipes';
+import { createPageState, type PageStateHandle } from '../../../../shared/forms/page-state';
+import { DateTimePipe, EnumLabelPipe, RelativeTimePipe } from '../../../../shared/pipes/format.pipes';
 import { ReportService } from '../../data/report.service';
 import { TeacherRoomService } from '../../data/teacher-room.service';
-import type { ReportFilters, ReportPeriod } from '../../models/report';
+import type { ReportAttemptRow, ReportFilters, ReportPeriod } from '../../models/report';
 import { pickedDateToInstant } from '../../util/brasilia-time';
 
 type TabId = 'visao-geral' | 'alunos' | 'ranking';
@@ -52,6 +52,7 @@ type TabId = 'visao-geral' | 'alunos' | 'ranking';
     EmptyStateComponent,
     ProgressBarComponent,
     DateTimePipe,
+    EnumLabelPipe,
     RelativeTimePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -70,6 +71,9 @@ export class ReportsPage {
   protected readonly period = signal<ReportPeriod>('LAST_30_DAYS');
   protected readonly customRange = signal<Date[] | null>(null);
   protected readonly studentQuery = signal<PageQuery>({ page: 0, size: 20 });
+  protected readonly expandedStudentId = signal<string | null>(null);
+  protected readonly attemptsQuery = signal<PageQuery>({ page: 0, size: 50 });
+  protected readonly attempts = signal<PageStateHandle<Page<ReportAttemptRow>> | null>(null);
 
   protected readonly exportGuard = createSubmitGuard();
 
@@ -198,10 +202,38 @@ export class ReportsPage {
       void this.students.load();
       void this.ranking.load();
     });
+
+    effect(() => {
+      const studentId = this.expandedStudentId();
+      const filters = this.filters();
+      const query = this.attemptsQuery();
+      if (!studentId || !filters.roomId) {
+        this.attempts.set(null);
+        return;
+      }
+
+      const state = createPageState(() => this.reports.studentAttempts(studentId, filters, query));
+      this.attempts.set(state);
+      void state.load();
+    });
   }
 
   protected selectTab(tab: TabId): void {
     this.activeTab.set(tab);
+  }
+
+  protected toggleAttempts(studentId: string): void {
+    if (this.expandedStudentId() === studentId) {
+      this.expandedStudentId.set(null);
+      return;
+    }
+
+    this.attemptsQuery.set({ page: 0, size: 50 });
+    this.expandedStudentId.set(studentId);
+  }
+
+  protected showAttemptPage(page: number): void {
+    this.attemptsQuery.update((current) => ({ ...current, page }));
   }
 
   protected goToRooms(): void {

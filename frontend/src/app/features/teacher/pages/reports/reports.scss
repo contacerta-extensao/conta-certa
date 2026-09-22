@@ -131,6 +131,48 @@
   font-variant-numeric: tabular-nums;
 }
 
+.student-attempts-toggle {
+  display: block;
+  margin-top: 0.25rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--p-primary-color);
+  font: inherit;
+  font-size: 0.8125rem;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+}
+
+.attempt-details-row > td {
+  padding: var(--cc-gap);
+  background: var(--cc-surface-sunken);
+}
+
+.student-attempts {
+  h3 {
+    margin: 0 0 var(--cc-gap-sm);
+    font-size: 0.95rem;
+  }
+}
+
+.student-attempts__empty {
+  margin: 0;
+  color: var(--cc-text-muted);
+  font-size: 0.875rem;
+}
+
+.student-attempts__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--cc-gap-sm);
+  margin-top: var(--cc-gap-sm);
+  color: var(--cc-text-muted);
+  font-size: 0.8125rem;
+}
+
 .stars {
   color: var(--cc-star);
   font-weight: 600;
