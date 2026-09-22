@@ -7,6 +7,23 @@
   list-style: none;
 }
 
+.shared-lesson-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0 0 var(--cc-gap);
+  padding: var(--cc-gap-sm) var(--cc-gap);
+  border-radius: var(--cc-radius);
+  background: var(--cc-surface-sunken);
+  color: var(--cc-text-muted);
+  font-size: 0.875rem;
+
+  i {
+    margin-top: 0.1rem;
+    color: var(--p-primary-color);
+  }
+}
+
 .question {
   display: flex;
   align-items: flex-start;

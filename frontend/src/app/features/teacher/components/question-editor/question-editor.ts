@@ -79,6 +79,8 @@ export class QuestionEditorComponent {
   /** `null` cria; preenchido edita. */
   readonly question = input<Question | null>(null);
   readonly readOnly = input(false);
+  /** Aprovação contextual antes de salvar alterações na lista de questões. */
+  readonly beforeSave = input<(() => Promise<boolean>) | null>(null);
 
   readonly saved = output<Question>();
 
@@ -176,6 +178,11 @@ export class QuestionEditorComponent {
     await this.guard.run(async () => {
       try {
         const current = this.question();
+        const beforeSave = this.beforeSave();
+        if (beforeSave && !(await beforeSave())) {
+          return;
+        }
+
         const result = current
           ? await this.questions.update(current.id, this.patchBody(current.version))
           : await this.questions.create(this.lessonId(), this.createBody());

@@ -219,7 +219,18 @@
             </ng-template>
             <ng-template #body let-row>
               <tr>
-                <td>{{ row.fullName }}</td>
+                <td>
+                  {{ row.fullName }}
+                  <button
+                    type="button"
+                    class="student-attempts-toggle"
+                    [attr.aria-expanded]="expandedStudentId() === row.studentId"
+                    [attr.aria-controls]="'attempts-' + row.studentId"
+                    (click)="toggleAttempts(row.studentId)"
+                  >
+                    {{ expandedStudentId() === row.studentId ? 'Ocultar tentativas' : 'Ver tentativas' }}
+                  </button>
+                </td>
                 <td>{{ row.registrationNumber ?? '—' }}</td>
                 <td>{{ row.attemptCount }}</td>
                 <td>{{ row.averageScorePercent !== null ? row.averageScorePercent + '%' : '—' }}</td>
@@ -234,6 +245,99 @@
                   }
                 </td>
               </tr>
+              @if (expandedStudentId() === row.studentId) {
+                <tr class="attempt-details-row">
+                  <td colspan="8">
+                    <section
+                      class="student-attempts"
+                      [id]="'attempts-' + row.studentId"
+                      [attr.aria-label]="'Tentativas de ' + row.fullName"
+                    >
+                      <h3>Histórico de tentativas — {{ row.fullName }}</h3>
+                      @if (attempts(); as attemptsState) {
+                        @if (attemptsState.isLoading()) {
+                          <cc-loading-skeleton kind="table" [count]="2" />
+                        } @else if (attemptsState.error(); as attemptsError) {
+                          <cc-error-state
+                            [error]="attemptsError"
+                            (retry)="attemptsState.retry()"
+                            (back)="attemptsState.retry()"
+                          />
+                        } @else if (attemptsState.data(); as attemptPage) {
+                          @if (attemptPage.totalElements === 0) {
+                            <p class="student-attempts__empty">
+                              Não há tentativas para este aluno em {{ periodLabel() }}.
+                            </p>
+                          } @else {
+                            <div class="cc-scroll-x">
+                              <p-table [value]="attemptPage.content" dataKey="attemptId">
+                                <ng-template #header>
+                                  <tr>
+                                    <th scope="col">Lição</th>
+                                    <th scope="col">Tentativa</th>
+                                    <th scope="col">Situação</th>
+                                    <th scope="col">Nota</th>
+                                    <th scope="col">Iniciada em</th>
+                                    <th scope="col">Enviada em</th>
+                                  </tr>
+                                </ng-template>
+                                <ng-template #body let-attempt>
+                                  <tr>
+                                    <td>{{ attempt.lessonTitle }}</td>
+                                    <td>{{ attempt.attemptNumber }}</td>
+                                    <td>{{ attempt.status | ccEnumLabel: 'AttemptStatus' }}</td>
+                                    <td>
+                                      {{
+                                        attempt.scorePercent !== null
+                                          ? attempt.scorePercent + '%'
+                                          : '—'
+                                      }}
+                                    </td>
+                                    <td>{{ attempt.startedAt | ccDateTime }}</td>
+                                    <td>
+                                      @if (attempt.submittedAt) {
+                                        {{ attempt.submittedAt | ccDateTime }}
+                                      } @else {
+                                        <span class="cc-muted">—</span>
+                                      }
+                                    </td>
+                                  </tr>
+                                </ng-template>
+                              </p-table>
+                            </div>
+                            @if (attemptPage.totalPages > 1) {
+                              <div class="student-attempts__pagination">
+                                <span>
+                                  Página {{ attemptPage.page + 1 }} de {{ attemptPage.totalPages }}
+                                </span>
+                                <p-button
+                                  label="Mais recentes"
+                                  icon="pi pi-angle-left"
+                                  severity="secondary"
+                                  [text]="true"
+                                  [disabled]="attemptPage.page === 0"
+                                  (onClick)="showAttemptPage(attemptPage.page - 1)"
+                                />
+                                <p-button
+                                  label="Mais antigas"
+                                  icon="pi pi-angle-right"
+                                  iconPos="right"
+                                  severity="secondary"
+                                  [text]="true"
+                                  [disabled]="attemptPage.page + 1 >= attemptPage.totalPages"
+                                  (onClick)="showAttemptPage(attemptPage.page + 1)"
+                                />
+                              </div>
+                            }
+                          }
+                        }
+                      } @else {
+                        <cc-loading-skeleton kind="table" [count]="2" />
+                      }
+                    </section>
+                  </td>
+                </tr>
+              }
             </ng-template>
           </p-table>
         </div>

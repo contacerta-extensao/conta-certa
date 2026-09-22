@@ -31,6 +31,11 @@
       <strong>{{ assignment().lesson.title }}</strong>
       <cc-status-tag [value]="assignment().status" kind="ContentStatus" />
     </div>
+    @if (assignment().status === 'DRAFT') {
+      <p class="row__visibility">
+        Rascunho nesta sala: ainda não aparece para os alunos.
+      </p>
+    }
 
     <dl class="row__facts">
       <div>

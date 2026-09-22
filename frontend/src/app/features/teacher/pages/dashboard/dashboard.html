@@ -8,14 +8,67 @@
   } @else if (state.error(); as error) {
     <cc-error-state [error]="error" (retry)="state.retry()" (back)="state.retry()" />
   } @else if (state.data(); as data) {
-    @if (data.roomCount === 0 && data.lessonCount === 0) {
-      <cc-empty-state
-        title="Vamos começar pela sua primeira sala"
-        message="Crie uma sala, monte a trilha com lições do seu acervo e distribua o código de ingresso para a turma."
-        actionLabel="Criar minha primeira sala"
-        icon="pi pi-users"
-        (action)="goToRooms()"
-      />
+    @if (data.roomCount === 0 || data.publishedLessonCount === 0) {
+      <section class="setup-guide cc-card" aria-labelledby="setup-guide-title">
+        <div class="setup-guide__intro">
+          <span class="setup-guide__eyebrow">Para começar</span>
+          <h2 id="setup-guide-title">Monte o caminho da sua turma</h2>
+          <p>As lições ficam no seu acervo e podem ser reutilizadas em várias salas.</p>
+        </div>
+
+        <ol class="setup-guide__steps">
+          <li [class.setup-guide__step--done]="data.roomCount > 0">
+            <div>
+              <strong>1. Crie uma sala</strong>
+              @if (data.roomCount > 0) {
+                <span class="setup-guide__complete">Concluído</span>
+              }
+              <p>Organize os alunos e configure a turma.</p>
+            </div>
+            <p-button
+              [label]="data.roomCount === 0 ? 'Criar primeira sala' : 'Ver salas'"
+              [icon]="data.roomCount === 0 ? 'pi pi-plus' : 'pi pi-arrow-right'"
+              [outlined]="true"
+              (onClick)="goToRooms(data.roomCount === 0)"
+            />
+          </li>
+          <li [class.setup-guide__step--done]="data.publishedLessonCount > 0">
+            <div>
+              <strong>2. Prepare e publique uma lição</strong>
+              @if (data.publishedLessonCount > 0) {
+                <span class="setup-guide__complete">Concluído</span>
+              }
+              <p>Escreva o conteúdo, adicione questões e publique no seu acervo.</p>
+            </div>
+            <p-button
+              [label]="data.publishedLessonCount === 0 ? 'Criar e publicar lição' : 'Ver lições'"
+              icon="pi pi-book"
+              [outlined]="true"
+              routerLink="/professor/licoes"
+            />
+          </li>
+          <li>
+            <div>
+              <strong>3. Disponibilize a lição na sala</strong>
+              <p>
+                Na trilha da sala, adicione a lição e publique a atribuição. Rascunhos da sala
+                ficam invisíveis para os alunos.
+              </p>
+            </div>
+            <p-button
+              label="Abrir salas"
+              icon="pi pi-users"
+              [outlined]="true"
+              routerLink="/professor/salas"
+            />
+          </li>
+        </ol>
+
+        <p class="setup-guide__publication-note">
+          Publicar no acervo permite atribuir a lição. A situação da atribuição controla se ela
+          aparece para os alunos em cada sala.
+        </p>
+      </section>
     } @else {
       <div class="cc-grid metrics">
         <article class="metric cc-card">

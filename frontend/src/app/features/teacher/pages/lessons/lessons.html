@@ -71,17 +71,19 @@
                 <a class="lesson__title" [routerLink]="['/professor/licoes', lesson.id]">
                   {{ lesson.title }}
                 </a>
+                <nav class="lesson__quick-actions" [attr.aria-label]="'Ações de conteúdo: ' + lesson.title">
+                  <a [routerLink]="['/professor/licoes', lesson.id]">Editar conteúdo</a>
+                  <a [routerLink]="['/professor/licoes', lesson.id, 'questoes']">
+                    Ver {{ lesson.questionCount }} questões
+                  </a>
+                </nav>
                 @if (lesson.summary) {
                   <br />
                   <small class="cc-muted">{{ lesson.summary }}</small>
                 }
               </td>
               <td><cc-lesson-status-tag [status]="lesson.status" /></td>
-              <td>
-                <a [routerLink]="['/professor/licoes', lesson.id, 'questoes']">
-                  {{ lesson.questionCount }}
-                </a>
-              </td>
+              <td>{{ lesson.questionCount }}</td>
               <td>{{ lesson.assignmentCount }}</td>
               <td>{{ lesson.updatedAt | ccRelativeTime }}</td>
               <td>
