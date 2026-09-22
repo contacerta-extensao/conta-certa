@@ -42,6 +42,12 @@
   }
 }
 
+.row__visibility {
+  margin: -0.15rem 0 0.5rem;
+  color: var(--cc-draft);
+  font-size: 0.8125rem;
+}
+
 .row__facts {
   display: flex;
   flex-wrap: wrap;

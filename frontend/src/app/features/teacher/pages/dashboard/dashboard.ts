@@ -3,7 +3,6 @@ import { Router, RouterLink } from '@angular/router';
 import { Button } from 'primeng/button';
 import { Tag } from 'primeng/tag';
 
-import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state';
 import { ErrorStateComponent } from '../../../../shared/components/error-state/error-state';
 import { LoadingSkeletonComponent } from '../../../../shared/components/loading-skeleton/loading-skeleton';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header';
@@ -26,7 +25,6 @@ import { TeacherDashboardService } from '../../data/teacher-dashboard.service';
     PageHeaderComponent,
     LoadingSkeletonComponent,
     ErrorStateComponent,
-    EmptyStateComponent,
     EnumLabelPipe,
     RelativeTimePipe,
   ],
@@ -45,7 +43,9 @@ export class TeacherDashboardPage {
   }
 
   /** A sala nova é criada na própria lista de salas, pelo diálogo de lá. */
-  protected goToRooms(): void {
-    void this.router.navigate(['/professor/salas'], { queryParams: { nova: '1' } });
+  protected goToRooms(createFirst = true): void {
+    void this.router.navigate(['/professor/salas'], {
+      queryParams: createFirst ? { nova: '1' } : undefined,
+    });
   }
 }
