@@ -1,0 +1,94 @@
+<div class="cc-page">
+  <cc-page-header
+    title="Professores"
+    subtitle="Colegas da sua instituição. Convide novos professores para usar a plataforma."
+  >
+    <p-button
+      label="Convidar professor"
+      icon="pi pi-user-plus"
+      (onClick)="inviteVisible.set(true)"
+    />
+  </cc-page-header>
+
+  <div class="toolbar">
+    <span class="toolbar__search">
+      <i class="pi pi-search" aria-hidden="true"></i>
+      <input
+        pInputText
+        type="search"
+        placeholder="Buscar por nome, e-mail ou matrícula"
+        aria-label="Buscar professor"
+        [ngModel]="search()"
+        (ngModelChange)="onSearch($event)"
+      />
+    </span>
+
+    <p-select
+      [options]="statusOptions"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="status()"
+      (ngModelChange)="onStatusChange($event)"
+      ariaLabel="Filtrar por situação"
+    />
+  </div>
+
+  @if (state.isLoading()) {
+    <cc-loading-skeleton kind="table" [count]="5" />
+  } @else if (state.error(); as error) {
+    <cc-error-state [error]="error" (retry)="state.retry()" (back)="state.retry()" />
+  } @else if (state.data(); as page) {
+    @if (page.totalElements === 0) {
+      <cc-empty-state
+        title="Nenhum professor encontrado"
+        [message]="
+          search() || status()
+            ? 'Nenhum professor corresponde aos filtros.'
+            : 'Convide um colega. Ele recebe um e-mail e define a própria senha.'
+        "
+        actionLabel="Convidar professor"
+        icon="pi pi-users"
+        actionIcon="pi pi-user-plus"
+        (action)="inviteVisible.set(true)"
+      />
+    } @else {
+      <div class="cc-scroll-x">
+        <p-table [value]="page.content" dataKey="id" [rowHover]="true">
+          <ng-template #header>
+            <tr>
+              <th scope="col">Professor</th>
+              <th scope="col">Matrícula</th>
+              <th scope="col">Situação</th>
+            </tr>
+          </ng-template>
+
+          <ng-template #body let-colleague>
+            <tr>
+              <td>
+                <span class="colleague__name">{{ colleague.fullName }}</span>
+                <br />
+                <small class="cc-muted">{{ colleague.email }}</small>
+              </td>
+              <td>{{ colleague.registrationNumber ?? '—' }}</td>
+              <td>
+                <cc-status-tag [value]="colleague.status" kind="AccountStatus" [rounded]="true" />
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+
+      @if (page.totalElements > page.size) {
+        <p-paginator
+          [first]="first()"
+          [rows]="page.size"
+          [totalRecords]="page.totalElements"
+          [rowsPerPageOptions]="[10, 20, 50]"
+          (onPageChange)="onPage($event)"
+        />
+      }
+    }
+  }
+</div>
+
+<cc-colleague-invite-dialog [(visible)]="inviteVisible" (saved)="onInvited()" />

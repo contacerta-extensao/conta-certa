@@ -25,5 +25,6 @@ export class TeacherShellComponent {
     { label: 'Videoaulas', icon: 'pi pi-video', route: '/professor/videos' },
     { label: 'Materiais', icon: 'pi pi-file', route: '/professor/materiais' },
     { label: 'Relatórios', icon: 'pi pi-chart-bar', route: '/professor/relatorios' },
+    { label: 'Professores', icon: 'pi pi-user-plus', route: '/professor/professores' },
   ];
 }
