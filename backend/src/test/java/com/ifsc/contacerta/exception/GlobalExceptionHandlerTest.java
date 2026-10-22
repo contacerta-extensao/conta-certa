@@ -10,6 +10,7 @@ import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -68,8 +69,33 @@ class GlobalExceptionHandlerTest {
 				.andExpect(jsonPath("$.code").value("VERSION_CONFLICT"));
 	}
 
+	@Test
+	void deveRetornar400ParaParametroComTipoInvalido() throws Exception {
+		mockMvc.perform(get("/test/uuid/abc"))
+				.andExpect(status().isBadRequest())
+				.andExpect(content().contentType("application/problem+json"))
+				.andExpect(jsonPath("$.code").value("MALFORMED_REQUEST"));
+	}
+
+	@Test
+	void deveRetornar500ParaErroInesperado() throws Exception {
+		mockMvc.perform(get("/test/unexpected"))
+				.andExpect(status().isInternalServerError())
+				.andExpect(content().contentType("application/problem+json"))
+				.andExpect(jsonPath("$.code").value("INTERNAL_ERROR"));
+	}
+
 	@RestController
 	static class TestController {
+
+		@GetMapping("/test/uuid/{id}")
+		void uuid(@PathVariable UUID id) {
+		}
+
+		@GetMapping("/test/unexpected")
+		void unexpected() {
+			throw new IllegalStateException("boom");
+		}
 
 		@GetMapping("/test/conflict")
 		void conflict() {

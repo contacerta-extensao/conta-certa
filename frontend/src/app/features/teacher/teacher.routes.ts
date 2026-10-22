@@ -72,6 +72,12 @@ export const teacherRoutes: Routes = [
         title: 'Relatórios · Conta Certa',
         loadComponent: () => import('./pages/reports/reports').then((m) => m.ReportsPage),
       },
+      {
+        path: 'professores',
+        title: 'Professores · Conta Certa',
+        loadComponent: () =>
+          import('./pages/colleagues/colleagues').then((m) => m.TeacherColleaguesPage),
+      },
       { path: '**', redirectTo: '' },
     ],
   },

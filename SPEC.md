@@ -34,10 +34,10 @@ O domínio não depende de `localStorage`. O frontend usa a API com PostgreSQL c
 - Login com e-mail e senha, rotação de refresh token e logout por sessão.
 - Cadastro público de aluno com instituição, confirmação de e-mail e política de senha.
 - Recuperação e redefinição de senha.
-- Convite administrativo para professores e definição inicial de senha.
+- Convite de professores (pelo administrador ou por outro professor da mesma instituição) e definição inicial de senha.
 - Consulta e edição do próprio perfil e troca de senha.
 
-O cadastro público é exclusivo para alunos. Professores entram pelo fluxo de convite do administrador.
+O cadastro público é exclusivo para alunos. Professores entram pelo fluxo de convite do administrador ou de um colega professor.
 
 ### Aluno
 
@@ -60,6 +60,7 @@ O cadastro público é exclusivo para alunos. Professores entram pelo fluxo de c
 - CRUD de vídeos e materiais, upload de PDF/PPT/PPTX e vínculos com salas e lições.
 - Consulta de visualizações por aluno.
 - Relatórios agregados, ranking, histórico detalhado, filtros, paginação e exportação CSV.
+- Lista dos professores da própria instituição e convite de novos professores para ela.
 
 ### Administrador
 
@@ -72,7 +73,7 @@ O cadastro público é exclusivo para alunos. Professores entram pelo fluxo de c
 
 - Não há lições padrão nem biblioteca compartilhada no backend. Professores trabalham com lições próprias, reutilizadas nas salas por atribuições.
 - Não há catálogo de questões padrão desabilitáveis. Todas as questões persistidas pertencem a uma lição do professor.
-- O professor não se cadastra publicamente; o administrador cria a conta pendente e envia o convite.
+- O professor não se cadastra publicamente; o administrador ou um colega da mesma instituição cria a conta pendente e envia o convite. Ativar, desativar e editar professores continua exclusivo do administrador.
 - O progresso é separado por sala, permitindo que o mesmo aluno tenha resultados diferentes em salas diferentes.
 - Arquivos privados são acessados pelo endpoint autorizado de download; o cliente não monta URLs diretas para o armazenamento.
 - O backend gera CSV para relatórios. A versão de impressão/PDF é montada pelo frontend.

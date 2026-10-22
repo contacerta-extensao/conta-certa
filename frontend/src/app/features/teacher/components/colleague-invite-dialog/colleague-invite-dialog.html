@@ -1,0 +1,73 @@
+<p-dialog
+  [visible]="visible()"
+  (visibleChange)="visible.set($event)"
+  header="Convidar professor"
+  [modal]="true"
+  [draggable]="false"
+  [style]="{ width: '34rem', maxWidth: '95vw' }"
+>
+  <form class="form" [formGroup]="form" (ngSubmit)="submit()">
+    <p-message severity="info">
+      O novo professor entra na sua instituição e recebe um e-mail para definir a própria senha.
+    </p-message>
+
+    <cc-form-field
+      label="Nome completo"
+      inputId="colleague-name"
+      [required]="true"
+      [control]="form.controls.fullName"
+    >
+      <input
+        pInputText
+        id="colleague-name"
+        type="text"
+        autocomplete="off"
+        [fluid]="true"
+        formControlName="fullName"
+      />
+    </cc-form-field>
+
+    <cc-form-field
+      label="E-mail"
+      inputId="colleague-email"
+      hint="É para este endereço que o convite vai."
+      [required]="true"
+      [control]="form.controls.email"
+    >
+      <input
+        pInputText
+        id="colleague-email"
+        type="email"
+        autocomplete="off"
+        [fluid]="true"
+        formControlName="email"
+      />
+    </cc-form-field>
+
+    <cc-form-field
+      label="Matrícula"
+      inputId="colleague-registration"
+      [required]="true"
+      [control]="form.controls.registrationNumber"
+    >
+      <input
+        pInputText
+        id="colleague-registration"
+        type="text"
+        autocomplete="off"
+        [fluid]="true"
+        formControlName="registrationNumber"
+      />
+    </cc-form-field>
+
+    <div class="form__actions">
+      <p-button
+        label="Cancelar"
+        severity="secondary"
+        [text]="true"
+        (onClick)="visible.set(false)"
+      />
+      <cc-submit-button label="Enviar convite" [submitting]="guard.submitting()" />
+    </div>
+  </form>
+</p-dialog>
