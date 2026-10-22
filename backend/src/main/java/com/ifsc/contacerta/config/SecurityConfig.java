@@ -2,6 +2,7 @@ package com.ifsc.contacerta.config;
 
 import com.ifsc.contacerta.security.JwtAuthenticationFilter;
 import com.ifsc.contacerta.security.SecurityProblemWriter;
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,6 +28,9 @@ public class SecurityConfig {
 				.csrf(csrf -> csrf.disable())
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(authorize -> authorize
+						// O forward interno para /error nao passa pelo filtro JWT; sem isto
+						// qualquer 404/500 viraria 401 e o frontend derrubaria a sessao.
+						.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
 						.requestMatchers(HttpMethod.POST, "/auth/login", "/auth/refresh", "/auth/student-registration",
 								"/auth/verify-email", "/auth/resend-verification", "/auth/forgot-password",
 								"/auth/reset-password", "/auth/accept-teacher-invite").permitAll()

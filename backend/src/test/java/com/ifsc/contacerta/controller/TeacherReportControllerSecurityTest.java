@@ -47,6 +47,19 @@ class TeacherReportControllerSecurityTest extends PostgresIntegrationTest {
 	}
 
 	@Test
+	void naoDeveTransformarErroDeRequisicaoAutenticadaEm401() throws Exception {
+		User teacher = user(Role.TEACHER, institution());
+		String token = bearer(login(teacher));
+
+		mockMvc.perform(get("/teacher/rota-inexistente").header("Authorization", token))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
+		mockMvc.perform(get("/teacher/reports/overview").header("Authorization", token).param("roomId", "abc"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("MALFORMED_REQUEST"));
+	}
+
+	@Test
 	void deveImpedirAlunoDeAcessarRelatoriosDoProfessor() throws Exception {
 		Institution institution = institution();
 		User student = user(Role.STUDENT, institution);
