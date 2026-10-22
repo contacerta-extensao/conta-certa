@@ -140,7 +140,7 @@
                   {{ room.name }}
                 </a>
                 <span class="cc-small cc-muted">{{ room.grade | ccEnumLabel: 'GradeShort' }}</span>
-                <span class="cc-small">{{ room.studentCount }} alunos</span>
+                <span class="cc-small">{{ room.studentCount }} {{ room.studentCount === 1 ? 'aluno' : 'alunos' }}</span>
                 @if (room.archived) {
                   <p-tag value="Arquivada" severity="secondary" />
                 }
